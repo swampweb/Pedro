@@ -1,6 +1,5 @@
-/* Pedro Supabase authentication connector.
-   This file is safe for GitHub Pages because it uses only the public anon key.
-   NEVER place a service_role key in browser code. */
+/* Pedro Supabase authentication and view controller.
+   Browser-safe public anon key only. Never use a service_role key here. */
 window.PEDRO_CONFIG = {
   supabaseUrl: "https://rjezpgaawtufrxxnibxf.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZXpwZ2Fhd3R1ZnJ4eG5pYnhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDM5ODEsImV4cCI6MjEwNDMxOTk4MX0.tDMRuV6_Ov0WCPVeoHkaDAGwTKoRrIak4I7cwA7zIIU"
@@ -8,36 +7,20 @@ window.PEDRO_CONFIG = {
 
 (() => {
   let client = null;
-  let loadingPromise = null;
+  let libraryPromise = null;
 
-  function loadSupabase() {
-    if (window.supabase?.createClient) return Promise.resolve();
-    if (loadingPromise) return loadingPromise;
-    loadingPromise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-      script.onload = resolve;
-      script.onerror = () => reject(new Error("Unable to load the Supabase browser library."));
-      document.head.appendChild(script);
-    });
-    return loadingPromise;
-  }
-
-  function statusElement() {
-    return document.querySelector("#auth-status") || document.querySelector(".login-panel .tiny");
-  }
+  const get = selector => document.querySelector(selector);
 
   function setStatus(message, type = "info") {
-    const element = statusElement();
+    const element = get("#auth-status") || get(".login-panel .tiny");
     if (!element) return;
     element.textContent = message;
     element.dataset.type = type;
-    element.style.color = type === "error" ? "#ff827a" : type === "success" ? "#76d99a" : "#d8b45b";
-  }
-
-  function toastMessage(message) {
-    if (typeof window.toast === "function") window.toast(message);
-    else setStatus(message);
+    element.style.color = type === "error"
+      ? "#ff827a"
+      : type === "success"
+        ? "#76d99a"
+        : "#d8b45b";
   }
 
   function friendlyError(error) {
@@ -48,9 +31,22 @@ window.PEDRO_CONFIG = {
     return message;
   }
 
+  function loadLibrary() {
+    if (window.supabase?.createClient) return Promise.resolve();
+    if (libraryPromise) return libraryPromise;
+    libraryPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      script.onload = resolve;
+      script.onerror = () => reject(new Error("Unable to load the Supabase browser library."));
+      document.head.appendChild(script);
+    });
+    return libraryPromise;
+  }
+
   async function getClient() {
     if (client) return client;
-    await loadSupabase();
+    await loadLibrary();
     client = window.supabase.createClient(
       window.PEDRO_CONFIG.supabaseUrl,
       window.PEDRO_CONFIG.supabaseAnonKey,
@@ -66,36 +62,65 @@ window.PEDRO_CONFIG = {
     return client;
   }
 
-  function getCredentials() {
+  function showLobby() {
+    const loginView = get("#login-view");
+    const appView = get("#app-view");
+    const gameView = get("#game-view");
+
+    loginView?.classList.remove("active");
+    appView?.classList.add("active");
+    gameView?.classList.remove("active");
+
+    /* These inline display values override the earlier login CSS rule that
+       incorrectly kept the inactive login screen visible. */
+    if (loginView) loginView.style.display = "none";
+    if (appView) appView.style.display = "block";
+    if (gameView) gameView.style.display = "none";
+
+    const lobby = get("#screen-lobby");
+    document.querySelectorAll(".screen").forEach(screen => screen.classList.remove("active"));
+    lobby?.classList.add("active");
+    window.scrollTo(0, 0);
+  }
+
+  function showLogin() {
+    const loginView = get("#login-view");
+    const appView = get("#app-view");
+    const gameView = get("#game-view");
+
+    loginView?.classList.add("active");
+    appView?.classList.remove("active");
+    gameView?.classList.remove("active");
+
+    if (loginView) loginView.style.display = "grid";
+    if (appView) appView.style.display = "none";
+    if (gameView) gameView.style.display = "none";
+    window.scrollTo(0, 0);
+  }
+
+  function credentials() {
     return {
-      email: document.querySelector("#login-email")?.value.trim() || "",
-      password: document.querySelector("#login-password")?.value || ""
+      email: get("#login-email")?.value.trim() || "",
+      password: get("#login-password")?.value || ""
     };
   }
 
   function setBusy(busy) {
-    const submit = document.querySelector('#login-form button[type="submit"]');
+    const submit = get('#login-form button[type="submit"]');
+    const create = get("#create-account");
     if (submit) {
       submit.disabled = busy;
       submit.textContent = busy ? "PLEASE WAIT..." : "SIGN IN";
     }
-    const create = document.querySelector("#create-account");
     if (create) create.disabled = busy;
-  }
-
-  function enterLobby() {
-    if (typeof window.enterApp === "function") window.enterApp();
-    else {
-      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-      document.querySelector("#app-view")?.classList.add("active");
-    }
   }
 
   async function signIn(event) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    const { email, password } = getCredentials();
+    const { email, password } = credentials();
     if (!email || !password) return setStatus("Enter both an email address and password.", "error");
+
     setBusy(true);
     setStatus("Signing in...");
     try {
@@ -103,8 +128,7 @@ window.PEDRO_CONFIG = {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       setStatus("Sign-in successful.", "success");
-      toastMessage("Welcome to Pedro");
-      enterLobby();
+      showLobby();
     } catch (error) {
       setStatus(friendlyError(error), "error");
     } finally {
@@ -115,8 +139,9 @@ window.PEDRO_CONFIG = {
   async function createAccount(event) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    const { email, password } = getCredentials();
+    const { email, password } = credentials();
     if (!email || !password) return setStatus("Enter an email address and password first.", "error");
+
     setBusy(true);
     setStatus("Creating account...");
     try {
@@ -127,7 +152,7 @@ window.PEDRO_CONFIG = {
         options: { emailRedirectTo: window.location.origin + window.location.pathname }
       });
       if (error) throw error;
-      if (data.session) enterLobby();
+      if (data.session) showLobby();
       else setStatus("Account created. Check email to confirm the account, then sign in.", "success");
     } catch (error) {
       setStatus(friendlyError(error), "error");
@@ -139,8 +164,9 @@ window.PEDRO_CONFIG = {
   async function resetPassword(event) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    const email = getCredentials().email;
+    const { email } = credentials();
     if (!email) return setStatus("Enter the account email address first.", "error");
+
     setStatus("Sending password-reset email...");
     try {
       const supabase = await getClient();
@@ -155,34 +181,37 @@ window.PEDRO_CONFIG = {
   }
 
   async function signOut(event) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
+    event?.preventDefault();
+    event?.stopImmediatePropagation();
     try {
       const supabase = await getClient();
       await supabase.auth.signOut();
     } finally {
-      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-      document.querySelector("#login-view")?.classList.add("active");
+      showLogin();
       setStatus("Signed out.", "success");
     }
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
-    document.querySelector("#login-form")?.addEventListener("submit", signIn, true);
-    document.querySelector("#create-account")?.addEventListener("click", createAccount, true);
-    const forgot = document.querySelector("#forgot-password") || document.querySelector(".login-panel .text-button");
-    forgot?.addEventListener("click", resetPassword, true);
-    document.querySelector("#sign-out")?.addEventListener("click", signOut, true);
+    get("#login-form")?.addEventListener("submit", signIn, true);
+    get("#create-account")?.addEventListener("click", createAccount, true);
+    (get("#forgot-password") || get(".login-panel .text-button"))
+      ?.addEventListener("click", resetPassword, true);
+    get("#sign-out")?.addEventListener("click", signOut, true);
 
     try {
       const supabase = await getClient();
-      const { data } = await supabase.auth.getSession();
-      if (data.session) enterLobby();
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (data.session) showLobby();
+      else showLogin();
+
       supabase.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_IN" && session) enterLobby();
+        if (event === "SIGNED_IN" && session) showLobby();
+        if (event === "SIGNED_OUT") showLogin();
       });
-      setStatus("Enter your account information to continue.");
     } catch (error) {
+      showLogin();
       setStatus(friendlyError(error), "error");
     }
   });
