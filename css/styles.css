@@ -14,3 +14,427 @@
 @media(max-height:800px) and (min-width:951px){.game-room{min-height:620px}.center-scoreboard{min-height:62px}.professional-table{border-width:12px}.north-seat{top:12px}.south-seat{bottom:96px}.hand-card{height:92px;width:64px}.table-info-list>div{padding:7px 0}.side-frame{padding:9px;margin-top:9px}.history-frame{min-height:86px}.control-note{margin:7px 0}.host-control-block{margin-top:8px;padding-top:8px}}
 @media(max-width:1250px){.game-room{grid-template-columns:205px minmax(560px,1fr) 250px}}
 @media(max-width:1000px){.game-room{height:auto;min-height:0;overflow:visible;grid-template-columns:1fr}.scoreboard-panel{display:none}.table-column{height:auto}.professional-table{height:620px}.table-info-panel{display:flex}.center-scoreboard{width:100%}}
+
+/* =====================================================================
+   Pedro table visual cleanup
+   Integrated into the main stylesheet. No patch stylesheet is required.
+   ===================================================================== */
+
+/* Keep the complete room inside the viewport without horizontal spill. */
+.game-room {
+  height: calc(100vh - 72px);
+  min-height: 650px;
+  grid-template-columns: 220px minmax(620px, 1fr) 268px;
+  gap: 10px;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.table-column {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 70px minmax(0, 1fr);
+  gap: 10px;
+}
+
+/* Cleaner integrated score strip. */
+.center-scoreboard {
+  min-height: 70px;
+  height: 70px;
+  border: 1px solid #67552b;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #101713 0%, #080e10 48%, #101713 100%);
+  box-shadow: 0 9px 26px rgba(0,0,0,.52), inset 0 1px rgba(255,255,255,.025);
+}
+
+.center-team b {
+  font-size: 27px;
+}
+
+/* Professional layered rail and green casino felt. */
+.professional-table {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border: 13px solid transparent;
+  border-radius: 41%;
+  background:
+    linear-gradient(145deg, #85532c 0%, #4d2b16 42%, #2a180d 72%, #744321 100%) border-box,
+    radial-gradient(ellipse at 50% 43%, #157053 0%, #0d563f 48%, #083b2e 76%, #06271f 100%) padding-box;
+  box-shadow:
+    inset 0 0 0 2px rgba(226,177,84,.42),
+    inset 0 0 34px rgba(0,0,0,.52),
+    inset 0 -55px 85px rgba(0,0,0,.31),
+    0 17px 44px rgba(0,0,0,.56);
+}
+
+.professional-table:before {
+  content: "";
+  position: absolute;
+  inset: 13px;
+  border-radius: 39%;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 2%, rgba(255,255,255,.07), transparent 30%),
+    repeating-linear-gradient(22deg, rgba(255,255,255,.011) 0 1px, transparent 1px 5px);
+  mix-blend-mode: screen;
+}
+
+.professional-table:after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 38%;
+  border: 1px solid rgba(231,184,83,.34);
+  box-shadow: inset 0 0 40px rgba(0,0,0,.52);
+  pointer-events: none;
+}
+
+.table-rail {
+  position: absolute;
+  inset: 6px;
+  border: 2px solid #1b0e07;
+  border-radius: 40%;
+  box-shadow: 0 0 0 2px #aa7138, inset 0 0 18px #000;
+  pointer-events: none;
+}
+
+.table-watermark {
+  color: rgba(235,201,115,.105);
+  font-size: 58px;
+  letter-spacing: .07em;
+  text-shadow: 0 2px 0 rgba(0,0,0,.36);
+}
+
+/* Remove the browser's native white button canvas completely. */
+.table-seat-button,
+button.table-seat-button {
+  appearance: none;
+  -webkit-appearance: none;
+  width: auto;
+  min-width: 0;
+  max-width: 205px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent !important;
+  color: var(--text);
+  box-shadow: none;
+  font: inherit;
+  overflow: visible;
+}
+
+/* Keep all four controls visually inside the felt. */
+.north-seat {
+  top: 17px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.south-seat {
+  bottom: 103px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.west-seat {
+  left: 34px;
+  top: 48%;
+  transform: translateY(-50%);
+}
+
+.east-seat {
+  right: 34px;
+  top: 48%;
+  transform: translateY(-50%);
+}
+
+.table-seat-button:hover {
+  filter: brightness(1.14);
+}
+
+.west-seat.table-seat-button:hover,
+.east-seat.table-seat-button:hover {
+  transform: translateY(-50%) scale(1.025);
+}
+
+.north-seat.table-seat-button:hover,
+.south-seat.table-seat-button:hover {
+  transform: translateX(-50%) scale(1.025);
+}
+
+.seat-avatar {
+  flex: 0 0 auto;
+  width: 43px;
+  height: 43px;
+  background: linear-gradient(145deg, #172326, #081012);
+  box-shadow: inset 0 1px rgba(255,255,255,.06), 0 5px 13px rgba(0,0,0,.52);
+}
+
+.seat-label {
+  min-width: 96px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: rgba(5,13,14,.94);
+  box-shadow: 0 7px 17px rgba(0,0,0,.44), inset 0 1px rgba(255,255,255,.035);
+}
+
+.team-one-seat .seat-label {
+  border: 1px solid rgba(199,67,56,.56);
+  border-left: 4px solid #d7473b;
+  background: linear-gradient(90deg, rgba(82,25,21,.95), rgba(5,13,14,.95) 72%);
+}
+
+.team-two-seat .seat-label {
+  border: 1px solid rgba(42,139,182,.58);
+  border-left: 4px solid #2b91c0;
+  background: linear-gradient(90deg, rgba(13,56,77,.96), rgba(5,13,14,.95) 72%);
+}
+
+.team-one-seat .seat-avatar {
+  border-color: #e1584d;
+  box-shadow: 0 0 0 3px rgba(145,39,31,.55), 0 7px 16px rgba(0,0,0,.5);
+}
+
+.team-two-seat .seat-avatar {
+  border-color: #43a6d4;
+  box-shadow: 0 0 0 3px rgba(21,91,125,.58), 0 7px 16px rgba(0,0,0,.5);
+}
+
+.seat-action {
+  z-index: 20;
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 5px 12px rgba(0,0,0,.42);
+}
+
+/* Right rail gets stable sections and no sideways scrolling. */
+.table-info-panel {
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: grid;
+  grid-template-rows: auto auto minmax(132px, 1fr) auto;
+  align-content: start;
+  gap: 10px;
+  padding: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #59666a #091012;
+}
+
+.table-info-panel .panel-title,
+.table-info-list,
+.side-frame {
+  min-width: 0;
+}
+
+.table-info-list > div {
+  padding: 7px 0;
+}
+
+.side-frame {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #34464b;
+  border-radius: 10px;
+  background: linear-gradient(155deg, #111b1e, #070d0f);
+  box-shadow: inset 0 1px rgba(255,255,255,.025);
+}
+
+.history-frame {
+  min-height: 132px;
+  max-height: 230px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-frame .history-list {
+  flex: 1;
+  min-height: 0;
+  margin-top: 8px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.frame-heading {
+  min-height: 25px;
+  padding-bottom: 7px;
+}
+
+/* Waiting/phase is a readable capsule, not a tiny circle. */
+.frame-heading b,
+#control-phase-label {
+  width: auto;
+  min-width: 64px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid #6c592d;
+  border-radius: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold2);
+  font-size: 8px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.table-control-frame {
+  margin: 0;
+  padding: 10px;
+}
+
+.control-note {
+  margin: 8px 0;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+/* Compact controls. Waiting buttons use two columns, with Ready full width. */
+.stacked-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.stacked-controls .primary:last-child,
+#ready-button,
+#start-game,
+#deal-cards,
+#play-selected {
+  grid-column: 1 / -1;
+}
+
+.table-control-frame button {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 8px;
+  font-size: 10px;
+  letter-spacing: .06em;
+  border-radius: 6px;
+}
+
+.host-control-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.host-label {
+  grid-column: 1 / -1;
+}
+
+.bid-control-grid {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.bid-control-grid .bid-button {
+  min-height: 30px;
+  padding: 0 3px;
+  font-size: 9px;
+}
+
+.trump-control-grid {
+  gap: 5px;
+}
+
+.trump-control-grid .suit-button {
+  min-height: 34px;
+  padding: 0 5px;
+  font-size: 10px;
+}
+
+/* Keep hand and South position visible. */
+.player-hand {
+  bottom: 4px;
+}
+
+.hand-card {
+  width: 68px;
+  height: 98px;
+}
+
+.south-seat {
+  bottom: 99px;
+}
+
+@media (max-height: 820px) and (min-width: 1001px) {
+  .game-room {
+    min-height: 606px;
+  }
+  .table-column {
+    grid-template-rows: 62px minmax(0, 1fr);
+  }
+  .center-scoreboard {
+    height: 62px;
+    min-height: 62px;
+  }
+  .center-team b {
+    font-size: 23px;
+  }
+  .professional-table {
+    border-width: 11px;
+  }
+  .north-seat {
+    top: 10px;
+  }
+  .south-seat {
+    bottom: 88px;
+  }
+  .hand-card {
+    width: 61px;
+    height: 87px;
+  }
+  .history-frame {
+    min-height: 102px;
+    max-height: 165px;
+  }
+  .table-info-list > div {
+    padding: 5px 0;
+  }
+  .side-frame,
+  .table-control-frame {
+    padding: 8px;
+  }
+  .control-note {
+    margin: 5px 0;
+  }
+  .table-control-frame button {
+    min-height: 30px;
+  }
+}
+
+@media (max-width: 1250px) {
+  .game-room {
+    grid-template-columns: 198px minmax(560px,1fr) 246px;
+  }
+  .west-seat { left: 23px; }
+  .east-seat { right: 23px; }
+}
+
+@media (max-width: 1000px) {
+  .game-room {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    grid-template-columns: 1fr;
+  }
+  .table-column {
+    height: auto;
+    grid-template-rows: auto 620px;
+  }
+  .table-info-panel {
+    display: grid;
+    grid-template-rows: auto auto auto auto;
+    overflow: visible;
+  }
+  .professional-table {
+    height: 620px;
+  }
+}
