@@ -1,108 +1,190 @@
 (() => {
-  if (window.PedroGameState?.version === '3.1') return;
-  const KEY = 'pedro.game.v3';
-  const seatOrder = ['south', 'west', 'north', 'east'];
-  const suits = ['♥', '♦', '♣', '♠'];
-  const ranks = ['A','K','Q','J','10','9','8','7','6','5','4','3','2'];
+  const VERSION = '4.0';
+  if (window.PedroGameState?.version === VERSION) return;
+
+  const KEY = 'pedro.game.v4';
+  const OLD_KEYS = ['pedro.game.v2', 'pedro.game.v3'];
+  const SEATS = ['south', 'west', 'north', 'east'];
+  const SUITS = ['♥', '♦', '♣', '♠'];
+  const RANKS = ['A','K','Q','J','10','9','8','7','6','5','4','3','2'];
 
   const fresh = () => ({
-    version:'3.1', tableId:null, tableName:'Pedro Table', phase:'waiting', dealer:'south',
-    currentBidder:null, bidOrder:[], bidIndex:-1, bids:[], highBid:null, winner:null,
-    trump:null, hands:{north:[],south:[],east:[],west:[]}, handOrder:{}, kitty:[], discards:[],
-    seats:{north:null,south:null,east:null,west:null}, watchers:[], scores:{team1:0,team2:0}
+    version: VERSION,
+    tableId: null,
+    tableName: 'Pedro Table',
+    phase: 'waiting',
+    identity: { id: null, name: '' },
+    seats: { north: null, south: null, east: null, west: null },
+    watchers: [],
+    dealer: null,
+    currentBidder: null,
+    bidOrder: [],
+    bidIndex: -1,
+    bids: [],
+    highBid: null,
+    winner: null,
+    trump: null,
+    hands: { north: [], south: [], east: [], west: [] },
+    kitty: [],
+    discards: [],
+    scores: { team1: 0, team2: 0 }
   });
 
+  for (const oldKey of OLD_KEYS) sessionStorage.removeItem(oldKey);
   let state = fresh();
   try {
     const saved = JSON.parse(sessionStorage.getItem(KEY) || 'null');
-    if (saved?.tableId) state = {...fresh(), ...saved, version:'3.1'};
+    if (saved?.version === VERSION && saved.tableId) state = { ...fresh(), ...saved };
   } catch {}
 
   const snap = () => JSON.parse(JSON.stringify(state));
   function emit() {
     sessionStorage.setItem(KEY, JSON.stringify(state));
-    window.dispatchEvent(new CustomEvent('pedro:state', {detail:snap()}));
+    window.dispatchEvent(new CustomEvent('pedro:state', { detail: snap() }));
   }
-  function reset(table={}) {
+  function setIdentity(identity) {
+    state.identity = { id: identity.id || null, name: identity.displayName || identity.name || '' };
+    emit();
+  }
+  function reset(table = {}) {
+    const identity = state.identity;
     state = fresh();
+    state.identity = identity;
     state.tableId = table.id || table.name || `local-${Date.now()}`;
     state.tableName = table.name || 'Pedro Table';
     emit();
   }
-  function setTable(table={}) {
+  function setTable(table = {}) {
     const id = table.id || table.name;
     if (!state.tableId || (id && state.tableId !== id)) reset(table);
     else { state.tableName = table.name || state.tableName; emit(); }
   }
-  function seats(value) { state.seats = {...state.seats, ...value}; emit(); }
-  function releasePlayer(name) {
-    for (const seat of seatOrder) if (state.seats[seat] === name) state.seats[seat] = null;
-    state.watchers = state.watchers.filter(item => item !== name);
+  function setSeats(seats) {
+    state.seats = { ...state.seats, ...seats };
+    state.watchers = state.watchers.filter(name => !Object.values(state.seats).includes(name));
     emit();
   }
-  function enterWatcher(name) {
-    if (!name || Object.values(state.seats).includes(name) || state.watchers.includes(name)) return;
-    state.watchers.push(name); emit();
-  }
-  function takeSeat(seat,name) {
-    if (!seatOrder.includes(seat) || !name) return false;
-    for (const key of seatOrder) if (state.seats[key] === name) state.seats[key] = null;
+  function takeSeat(seat, name = state.identity.name) {
+    if (!SEATS.includes(seat) || !name) return false;
+    for (const key of SEATS) if (state.seats[key] === name) state.seats[key] = null;
     if (state.seats[seat] && state.seats[seat] !== name) return false;
     state.seats[seat] = name;
     state.watchers = state.watchers.filter(item => item !== name);
-    emit(); return true;
+    emit();
+    return true;
   }
-  function deck() {
-    const cards=[];
-    for (const suit of suits) for (const rank of ranks) cards.push({id:`${suit}-${rank}`,suit,rank});
-    for (let i=cards.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [cards[i],cards[j]]=[cards[j],cards[i]]; }
+  function enterWatcher(name = state.identity.name) {
+    if (!name || Object.values(state.seats).includes(name) || state.watchers.includes(name)) return;
+    state.watchers.push(name);
+    emit();
+  }
+  function releasePlayer(name = state.identity.name) {
+    for (const seat of SEATS) if (state.seats[seat] === name) state.seats[seat] = null;
+    state.watchers = state.watchers.filter(item => item !== name);
+    emit();
+  }
+  function createDeck() {
+    const cards = [];
+    for (const suit of SUITS) for (const rank of RANKS) cards.push({ id: `${suit}-${rank}`, suit, rank });
+    for (let index = cards.length - 1; index > 0; index--) {
+      const swap = Math.floor(Math.random() * (index + 1));
+      [cards[index], cards[swap]] = [cards[swap], cards[index]];
+    }
     return cards;
   }
   function deal() {
-    const cards=deck(); state.hands={north:[],south:[],east:[],west:[]}; state.handOrder={};
-    for(let round=0;round<9;round++) for(const seat of seatOrder) state.hands[seat].push(cards.shift());
-    state.kitty=cards; state.phase='bidding'; state.bids=[]; state.highBid=null; state.winner=null; state.trump=null;
-    const dealerIndex=seatOrder.indexOf(state.dealer);
-    state.bidOrder=[1,2,3,4].map(offset=>seatOrder[(dealerIndex+offset)%4]);
-    state.bidIndex=0; state.currentBidder=state.bidOrder[0]; emit();
+    if (Object.values(state.seats).filter(Boolean).length !== 4) return { ok: false, message: 'Four players must be seated before dealing.' };
+    if (!state.dealer || !state.seats[state.dealer]) state.dealer = 'south';
+    const deck = createDeck();
+    state.hands = { north: [], south: [], east: [], west: [] };
+    for (let round = 0; round < 9; round++) for (const seat of SEATS) state.hands[seat].push(deck.shift());
+    state.kitty = deck;
+    state.phase = 'bidding';
+    state.bids = [];
+    state.highBid = null;
+    state.winner = null;
+    state.trump = null;
+    const dealerIndex = SEATS.indexOf(state.dealer);
+    state.bidOrder = [1,2,3,4].map(offset => SEATS[(dealerIndex + offset) % 4]);
+    state.bidIndex = 0;
+    state.currentBidder = state.bidOrder[0];
+    emit();
+    return { ok: true };
   }
-  function allowed(seat) {
-    if(state.phase!=='bidding'||seat!==state.currentBidder)return[];
-    const dealerLast=seat===state.dealer&&state.bidIndex===state.bidOrder.length-1;
-    if(dealerLast&&!state.highBid)return[6,'14/28'];
-    const high=Number(state.highBid?.amount||6), values=[];
-    for(let bid=Math.max(7,high+1);bid<=14;bid++)values.push(bid);
-    if(high<14)values.push('14/28');
-    return values;
+  function allowedBids(seat) {
+    if (state.phase !== 'bidding' || seat !== state.currentBidder) return [];
+    const dealerLast = seat === state.dealer && state.bidIndex === state.bidOrder.length - 1;
+    if (dealerLast && !state.highBid) return [6, '14/28'];
+    const high = Number(state.highBid?.numeric || 6);
+    const bids = [];
+    for (let value = Math.max(7, high + 1); value <= 14; value++) bids.push(value);
+    if (high < 14) bids.push('14/28');
+    return bids;
   }
-  function bid(seat,value) {
-    if(seat!==state.currentBidder)return{ok:false,message:'It is not this player’s turn.'};
-    const pass=value==='pass';
-    const dealerLast=seat===state.dealer&&state.bidIndex===state.bidOrder.length-1;
-    if(pass&&dealerLast&&!state.highBid)return{ok:false,message:'Dealer is forced to bid 6 or 14/28.'};
-    const normalized=value==='14/28'?14:Number(value);
-    if(!pass&&!allowed(seat).some(item=>item===value||Number(item)===normalized))return{ok:false,message:'That bid is not allowed.'};
-    const player=state.seats[seat]||seat;
-    state.bids.push({seat,player,amount:pass?'PASS':value,contract:value==='14/28'?'14/28':normalized});
-    if(!pass)state.highBid={seat,amount:value,contract:value==='14/28'?'14/28':normalized};
-    state.bidIndex++;
-    if(state.bidIndex>=state.bidOrder.length){
-      if(!state.highBid)state.highBid={seat:state.dealer,amount:6,contract:6};
-      state.winner=state.highBid.seat; state.currentBidder=null; state.phase='trump';
-    } else state.currentBidder=state.bidOrder[state.bidIndex];
-    emit(); return{ok:true};
+  function bid(seat, value) {
+    if (seat !== state.currentBidder) return { ok: false, message: 'It is not this player’s turn.' };
+    const pass = value === 'pass';
+    const dealerLast = seat === state.dealer && state.bidIndex === state.bidOrder.length - 1;
+    if (pass && dealerLast && !state.highBid) return { ok: false, message: 'Dealer is forced to bid 6 or 14/28.' };
+    const numeric = value === '14/28' ? 14 : Number(value);
+    if (!pass && !allowedBids(seat).some(item => item === value || Number(item) === numeric)) return { ok: false, message: 'That bid is not allowed.' };
+    const player = state.seats[seat];
+    if (!player) return { ok: false, message: 'The bid seat has no player.' };
+    state.bids.push({ seat, player, amount: pass ? 'PASS' : value, numeric });
+    if (!pass) state.highBid = { seat, player, amount: value, numeric };
+    state.bidIndex += 1;
+    if (state.bidIndex >= state.bidOrder.length) {
+      if (!state.highBid) state.highBid = { seat: state.dealer, player: state.seats[state.dealer], amount: 6, numeric: 6 };
+      state.winner = state.highBid.seat;
+      state.currentBidder = null;
+      state.phase = 'trump';
+    } else {
+      state.currentBidder = state.bidOrder[state.bidIndex];
+    }
+    emit();
+    return { ok: true };
   }
-  function trump(suit){if(state.phase!=='trump')return false;state.trump=suit;state.phase='dealer-discard';state.hands[state.dealer]=state.hands[state.dealer].concat(state.kitty);state.kitty=[];emit();return true}
-  function reorderHand(seat, orderedIds){
-    if(!state.hands[seat])return;
-    const lookup=new Map(state.hands[seat].map(card=>[card.id,card]));
-    const ordered=orderedIds.map(id=>lookup.get(id)).filter(Boolean);
-    state.hands[seat].forEach(card=>{if(!orderedIds.includes(card.id))ordered.push(card)});
-    state.hands[seat]=ordered; emit();
+  function chooseTrump(suit) {
+    if (state.phase !== 'trump' || !SUITS.includes(suit)) return false;
+    state.trump = suit;
+    state.phase = 'dealer-discard';
+    state.hands[state.dealer] = state.hands[state.dealer].concat(state.kitty);
+    state.kitty = [];
+    emit();
+    return true;
   }
-  function discard(ids){const hand=state.hands[state.dealer],need=hand.length-6;if(ids.length!==need)return{ok:false,message:`Select exactly ${need} cards.`};const selected=new Set(ids);state.discards=hand.filter(card=>selected.has(card.id));state.hands[state.dealer]=hand.filter(card=>!selected.has(card.id));state.phase='playing';emit();return{ok:true}}
-  function nextDealer(){state.dealer=seatOrder[(seatOrder.indexOf(state.dealer)+1)%4];emit()}
-  function score(contract,madeAll){return contract==='14/28'?(madeAll?28:-14):(madeAll?Number(contract):-Number(contract))}
+  function reorderHand(seat, orderedIds) {
+    const hand = state.hands[seat];
+    if (!hand) return;
+    const lookup = new Map(hand.map(card => [card.id, card]));
+    state.hands[seat] = orderedIds.map(id => lookup.get(id)).filter(Boolean);
+    for (const card of hand) if (!orderedIds.includes(card.id)) state.hands[seat].push(card);
+    emit();
+  }
+  function discardDealer(ids) {
+    const hand = state.hands[state.dealer];
+    const required = hand.length - 6;
+    if (ids.length !== required) return { ok: false, message: `Select exactly ${required} cards.` };
+    const selected = new Set(ids);
+    state.discards = hand.filter(card => selected.has(card.id));
+    state.hands[state.dealer] = hand.filter(card => !selected.has(card.id));
+    state.phase = 'playing';
+    emit();
+    return { ok: true };
+  }
+  function nextDealer() {
+    state.dealer = SEATS[(SEATS.indexOf(state.dealer) + 1) % SEATS.length];
+    emit();
+  }
+  function scoreContract(contract, completed) {
+    return contract === '14/28' ? (completed ? 28 : -14) : (completed ? Number(contract) : -Number(contract));
+  }
 
-  window.PedroGameState={version:'3.1',snap,reset,setTable,seats,releasePlayer,enterWatcher,takeSeat,deal,allowed,bid,trump,reorderHand,discard,nextDealer,score};
+  window.PedroGameState = {
+    version: VERSION, snap, setIdentity, reset, setTable, setSeats, takeSeat, enterWatcher,
+    releasePlayer, deal, allowedBids, bid, chooseTrump, reorderHand, discardDealer,
+    nextDealer, scoreContract
+  };
+
+  PedroIdentity.ready.then(identity => setIdentity(identity));
 })();

@@ -47,6 +47,7 @@ window.PedroCore = (() => {
   async function start() {
     const modules = [
       'js/ui-branding.js',
+      'js/identity.js',
       'js/admin-nav.js',
       'js/profile.js',
       'js/create-table.js',
