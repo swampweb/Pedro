@@ -153,3 +153,11 @@
   .login-panel h2 { font-size: 27px; }
   .login-options { align-items: center; }
 }
+
+
+/* Approved transparent Pedro brand assets */
+.logo-frame{width:clamp(300px,34vw,560px);aspect-ratio:auto;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.login-brand-logo{width:100%;height:auto;max-width:100%;max-height:360px;object-fit:contain;filter:drop-shadow(0 18px 26px rgba(0,0,0,.48))}
+.logo-button>img{width:auto;height:48px;max-width:150px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+@media(max-width:900px){.logo-frame{width:min(440px,82vw)}.login-brand-logo{max-height:280px}}
+@media(max-width:520px){.logo-frame{width:min(330px,88vw)}.logo-button>img{height:40px;max-width:120px}}
