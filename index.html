@@ -1,35 +1,129 @@
-<!-- Replace only the login section in your current index.html -->
-<section id="login-view" class="view active login-view">
-  <div class="brand-side refined-brand">
-    <img class="login-brand-logo" src="assets/logo/pedro_logo.png" alt="Pedro Logo">
-    <div class="brand-tagline">
-      <h2>The South Louisiana Card Game</h2>
-      <p>Four Players • Two Teams • One Winner</p>
-    </div>
-  </div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090d10">
+  <title>Pedro Online</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="toast" class="toast" aria-live="polite"></div>
 
-  <form id="login-form" class="panel login-panel">
-    <p class="eyebrow gold">WELCOME TO THE TABLE</p>
-    <h2>Sign in to play</h2>
-
-    <label>Email address
-      <input id="login-email" type="email" placeholder="you@example.com">
-    </label>
-
-    <label>Password
-      <input id="login-password" type="password" placeholder="Enter your password">
-    </label>
-
-    <div class="split small">
-      <label class="inline-check"><input type="checkbox"> Remember me</label>
-      <button class="text-button" type="button">Forgot password?</button>
+  <section id="login-view" class="view active login-view">
+    <div class="login-brand-column">
+      <div class="logo-frame">
+        <img class="login-brand-logo" src="assets/logo/pedro_logo.png" alt="Pedro Southern Card Game logo">
+      </div>
+      <div class="login-brand-copy">
+        <p class="eyebrow gold">THE SOUTH LOUISIANA CARD GAME</p>
+        <h1>Play Pedro Online</h1>
+        <p>Four players. Two teams. One winner.</p>
+      </div>
     </div>
 
-    <button class="primary wide" type="submit">SIGN IN</button>
-    <button class="secondary wide" type="button">CREATE ACCOUNT</button>
+    <form id="login-form" class="panel login-panel">
+      <p class="eyebrow gold">WELCOME TO THE TABLE</p>
+      <h2>Sign in to play</h2>
+      <p class="login-intro">Use your Pedro account to enter the game lobby.</p>
 
-    <p class="center muted tiny">
-      Supabase authentication will replace demo login in the next update.
-    </p>
-  </form>
-</section>
+      <label>Email address
+        <input id="login-email" type="email" placeholder="you@example.com" autocomplete="email" required>
+      </label>
+
+      <label>Password
+        <input id="login-password" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+      </label>
+
+      <div class="split small login-options">
+        <label class="inline-check"><input type="checkbox"> Remember me</label>
+        <button class="text-button" type="button">Forgot password?</button>
+      </div>
+
+      <button class="primary wide" type="submit">SIGN IN</button>
+      <button id="create-account" class="secondary wide" type="button">CREATE ACCOUNT</button>
+      <p id="auth-status" class="center muted tiny">Secure account access powered by Supabase.</p>
+    </form>
+  </section>
+
+  <section id="app-view" class="view app-view">
+    <header class="topbar">
+      <button class="logo-button" data-screen="lobby" aria-label="Pedro Online home"><img src="assets/logo/pedro_logo.png" alt=""><b>PEDRO<small>ONLINE</small></b></button>
+      <div id="page-heading" class="page-heading">Game Lobby</div>
+      <div class="profile-chip"><span class="avatar">CV</span><div><b>CajunPlayer</b><small>Online</small></div></div>
+    </header>
+    <div class="app-grid">
+      <nav class="panel sidebar">
+        <button class="nav-button active" data-screen="lobby">⌂ <span>Lobby</span></button>
+        <button class="nav-button" data-screen="create">＋ <span>Create Table</span></button>
+        <button class="nav-button" data-screen="join">⇥ <span>Join Table</span></button>
+        <button class="nav-button" data-screen="tournaments">♛ <span>Tournaments</span></button>
+        <button class="nav-button" data-screen="profile">♙ <span>Profile</span></button>
+        <button id="sign-out" class="nav-button sign-out">↪ <span>Sign Out</span></button>
+        <div class="connection"><i></i> Demo Connected</div>
+      </nav>
+
+      <main class="content">
+        <section id="screen-lobby" class="screen active">
+          <div class="panel hero">
+            <div><p class="eyebrow gold">WELCOME BACK</p><h2>Find your seat at the table</h2><p class="muted">Create a private room for friends or join an open South Louisiana table.</p></div>
+            <button class="primary" data-screen="create">＋ CREATE TABLE</button>
+          </div>
+          <div class="section-title"><div><p class="eyebrow">AVAILABLE NOW</p><h3>Open Tables</h3></div><button id="refresh-tables" class="secondary">↻ Refresh</button></div>
+          <div class="panel table-list">
+            <div class="table-row table-header"><b>TABLE</b><b>HOST</b><b>RULES</b><b>SCORE</b><b>PLAYERS</b><b></b></div>
+            <div class="table-row"><div><b>Bayou Table 1</b><small>Seat available</small></div><span>PoppaT</span><span class="pill">Follow Suit</span><span>52</span><span>3 / 4</span><button class="join-button play-demo">JOIN</button></div>
+            <div class="table-row"><div><b>Cajun Crew</b><small>Seat available</small></div><span>Lafitte</span><span class="pill">Cut-Throat</span><span>64</span><span>2 / 4</span><button class="join-button play-demo">JOIN</button></div>
+            <div class="table-row"><div><b>Golden Meadow</b><small>Spectators allowed</small></div><span>TroutMan</span><span class="pill">Follow Suit</span><span>52</span><span>4 / 4</span><button class="secondary play-demo">WATCH</button></div>
+            <div class="table-row"><div><b>Thibodaux Kings</b><small>Seat available</small></div><span>RedFish</span><span class="pill">Cut-Throat</span><span>52</span><span>1 / 4</span><button class="join-button play-demo">JOIN</button></div>
+          </div>
+        </section>
+
+        <section id="screen-create" class="screen">
+          <form id="create-table-form" class="panel form-panel">
+            <p class="eyebrow gold">NEW GAME ROOM</p><h2>Create a Pedro Table</h2><p class="muted">Rules lock when the first hand begins.</p>
+            <label>Table name<input id="table-name" value="Bayou Good Times" maxlength="40"></label>
+            <div class="field"><span>Table visibility</span><div class="choice-grid"><button type="button" class="choice" data-visibility="public">◉ Public<small>Anyone may join</small></button><button type="button" class="choice selected" data-visibility="private">▣ Private<small>Room code required</small></button></div></div>
+            <label id="room-code-wrap">Private room code<div class="code-input"><input id="room-code" value="BAYOU24" readonly><button id="new-code" type="button">↻</button></div></label>
+            <div class="field"><span>Play style</span><div class="choice-grid"><button type="button" class="choice selected" data-rule="follow">Follow Suit<small>Follow the led suit when able</small></button><button type="button" class="choice" data-rule="cut">Cut-Throat<small>Every card remains playable</small></button></div></div>
+            <label>Winning score<select id="winning-score"><option value="52">52 points</option><option value="64">64 points</option></select></label>
+            <div class="setting"><div><b>First trick must lead trump</b><small>Require the pitcher to open with trump</small></div><label class="switch"><input type="checkbox" checked><span></span></label></div>
+            <div class="setting"><div><b>Trump 2 belongs to</b><small>Select the table's scoring rule</small></div><select><option>Team that was dealt it</option><option>Team that captures it</option></select></div>
+            <button class="primary wide" type="submit">CREATE TABLE</button>
+          </form>
+        </section>
+
+        <section id="screen-join" class="screen">
+          <div class="panel form-panel compact-form"><p class="eyebrow gold">PRIVATE TABLE</p><h2>Join with a Room Code</h2><p class="muted">Enter the private code provided by the table host.</p><label>Room code<input id="join-code" placeholder="Example: BAYOU24" maxlength="8"></label><button id="join-private" class="primary wide">JOIN TABLE</button></div>
+        </section>
+
+        <section id="screen-tournaments" class="screen">
+          <div class="panel hero"><div><p class="eyebrow gold">COMPETITIVE PLAY</p><h2>Pedro Tournaments</h2><p class="muted">Register a team, follow the bracket, and compete for the championship.</p></div><button class="primary">CREATE TOURNAMENT</button></div>
+          <div class="tournament-grid">
+            <div class="panel tournament-list"><h3>Upcoming Tournaments</h3><div class="tournament-row"><div><b>Bayou Classic</b><small>32 / 64 players</small></div><span class="pill">Registration Open</span><button class="join-button">JOIN</button></div><div class="tournament-row"><div><b>Cajun Showdown</b><small>18 / 32 players</small></div><span class="pill">Registration Open</span><button class="join-button">JOIN</button></div><div class="tournament-row"><div><b>Golden Meadow Open</b><small>12 / 64 players</small></div><span class="pill">Registration Open</span><button class="join-button">JOIN</button></div></div>
+            <div class="panel bracket"><h3>Bayou Classic Bracket</h3><div class="bracket-columns"><div><span>Team Bayou</span><span>Cut Off Kings</span><span>Larose Aces</span><span>Delta Crew</span></div><div><span>Semifinal A</span><span>Semifinal B</span></div><div><span class="final">♛ Final</span></div></div></div>
+          </div>
+        </section>
+
+        <section id="screen-profile" class="screen">
+          <div class="profile-grid"><div class="panel profile-card"><div class="profile-avatar">CV</div><h2>CajunPlayer</h2><p class="gold">Level 12</p><button class="secondary">EDIT PROFILE</button></div><div class="stats-grid"><div class="panel stat"><small>Games Played</small><b>124</b></div><div class="panel stat"><small>Games Won</small><b>78</b></div><div class="panel stat"><small>Win Rate</small><b>62.9%</b></div><div class="panel stat"><small>Tournaments Won</small><b>5</b></div><div class="panel stat"><small>Total Points</small><b>4,362</b></div><div class="panel stat"><small>Best Score</small><b>64</b></div></div><div class="panel achievements"><h3>Achievements</h3><div><span>🏆<small>First Win</small></span><span>♥<small>High Roller</small></span><span>♛<small>Pedro Master</small></span></div></div></div>
+        </section>
+      </main>
+    </div>
+  </section>
+
+  <section id="game-view" class="view game-view">
+    <header class="topbar"><button class="logo-button" id="game-logo" aria-label="Return to Pedro lobby"><img src="assets/logo/pedro_logo.png" alt=""><b>PEDRO<small>ONLINE</small></b></button><div class="room-heading"><b id="game-table-name">Bayou Good Times</b><small>Private Room · <span id="game-room-code">BAYOU24</span></small></div><button id="leave-table" class="secondary">LEAVE TABLE</button></header>
+    <div class="game-grid">
+      <aside class="panel game-side left-side"><p class="eyebrow">SCOREBOARD</p><div class="score red-team"><small>TEAM 1 · YOU</small><b id="team-one-score">28</b></div><div class="score blue-team"><small>TEAM 2</small><b id="team-two-score">24</b></div><div class="facts"><span>HAND <b>7</b></span><span>DEALER <b>East</b></span><span>PITCHER <b>South</b></span></div><div class="chat"><p><b>PoppaT:</b> Good luck y'all!</p><p><b>Lafitte:</b> Let's get it!</p><input placeholder="Type a message..."></div></aside>
+      <main class="table-stage"><div id="felt-table" class="felt-table"><div id="deal-deck" class="deal-deck card-back"></div><div class="seat north"><div class="seat-avatar">TR</div><b>TroutMan</b><div class="opponent-hand" data-count="6"></div></div><div class="seat west"><div class="seat-avatar">LA</div><b>Lafitte</b><div class="opponent-hand" data-count="5"></div></div><div class="seat east"><div class="seat-avatar">PO</div><b>PoppaT</b><div class="opponent-hand" data-count="4"></div></div><div id="trick-area" class="trick-area"></div><div class="your-seat"><div class="seat-avatar">CV</div><b>CajunPlayer</b><span>YOUR TURN</span></div><div id="player-hand" class="player-hand" aria-label="Your hand"></div></div>
+        <div class="panel actionbar"><div><p class="eyebrow gold">TABLE MESSAGE</p><b id="table-message">Drag cards to arrange your hand, or select a card to play.</b></div><div class="actions"><button id="deal-demo" class="secondary">DEAL DEMO</button><button id="sort-trump" class="secondary">SORT TRUMP</button><button id="play-card" class="primary" disabled>PLAY SELECTED CARD</button></div></div>
+      </main>
+      <aside class="panel game-side"><p class="eyebrow">CURRENT HAND</p><div class="trump"><small>TRUMP</small><b>♥</b><span>Hearts</span></div><div class="info"><small>RULES</small><b id="game-rule">Follow Suit</b></div><div class="info"><small>WINNING BID</small><b>8 · Team 1</b></div><div class="info"><small>POINTS LEFT</small><b>4</b></div><h3>Hand History</h3><div class="history"><span>Hand 1 <b>+10</b></span><span>Hand 2 <b>+8</b></span><span>Hand 3 <b>+6</b></span><span>Hand 4 <b class="negative">-7</b></span></div></aside>
+    </div>
+  </section>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -26,8 +26,19 @@ function showScreen(name) {
 }
 function enterApp() { activateView("#app-view"); showScreen("lobby"); }
 
-$("#login-form").addEventListener("submit", e => { e.preventDefault(); toast("Visual demo sign-in successful"); enterApp(); });
-$("#demo-login").addEventListener("click", enterApp);
+$("#login-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const config = window.PEDRO_CONFIG || {};
+  if (!config.supabaseUrl || !config.supabaseAnonKey) {
+    toast("Supabase authentication is not connected yet.");
+    return;
+  }
+  toast("Authentication setup is not active in this visual build.");
+});
+const createAccountButton = $("#create-account");
+if (createAccountButton) createAccountButton.addEventListener("click", () => {
+  toast("Account creation will be enabled with Supabase authentication.");
+});
 $("#sign-out").addEventListener("click", () => activateView("#login-view"));
 $$('[data-screen]').forEach(b => b.addEventListener("click", () => showScreen(b.dataset.screen)));
 $("#refresh-tables").addEventListener("click", () => toast("Table list refreshed"));
