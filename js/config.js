@@ -7,11 +7,11 @@ window.PEDRO_CONFIG = {
 
 (() => {
   let libraryPromise = null;
+  let roleRefreshTimer = null;
 
   function loadSupabaseLibrary() {
     if (window.supabase?.createClient) return Promise.resolve();
     if (libraryPromise) return libraryPromise;
-
     libraryPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
@@ -19,15 +19,12 @@ window.PEDRO_CONFIG = {
       script.onerror = () => reject(new Error('Unable to load the Supabase browser library.'));
       document.head.appendChild(script);
     });
-
     return libraryPromise;
   }
 
   async function getSupabaseClient() {
     await loadSupabaseLibrary();
-
     if (window.pedroSupabase) return window.pedroSupabase;
-
     window.pedroSupabase = window.supabase.createClient(
       window.PEDRO_CONFIG.supabaseUrl,
       window.PEDRO_CONFIG.supabaseAnonKey,
@@ -39,8 +36,12 @@ window.PEDRO_CONFIG = {
         }
       }
     );
-
     return window.pedroSupabase;
+  }
+
+  function findProfileNavigation() {
+    return [...document.querySelectorAll('.nav-button')]
+      .find(element => element.textContent.trim().toLowerCase() === 'profile');
   }
 
   function removeAdministrationNavigation() {
@@ -48,15 +49,9 @@ window.PEDRO_CONFIG = {
   }
 
   function addAdministrationNavigation() {
-    if (document.querySelector('#nav-admin-link')) return;
-
-    const profileButton = [...document.querySelectorAll('.nav-button')]
-      .find(element => element.textContent.trim().toLowerCase() === 'profile');
-
-    if (!profileButton) {
-      console.warn('Pedro Admin: Profile navigation button was not found.');
-      return;
-    }
+    if (document.querySelector('#nav-admin-link')) return true;
+    const profileButton = findProfileNavigation();
+    if (!profileButton) return false;
 
     const adminLink = document.createElement('a');
     adminLink.id = 'nav-admin-link';
@@ -67,36 +62,39 @@ window.PEDRO_CONFIG = {
     adminLink.style.display = 'flex';
     adminLink.style.alignItems = 'center';
     adminLink.style.textDecoration = 'none';
-
     profileButton.insertAdjacentElement('afterend', adminLink);
+    return true;
+  }
+
+  async function databaseSaysAdmin(client) {
+    const { data, error } = await client
+      .schema('pedro')
+      .rpc('is_admin');
+
+    if (error) throw error;
+    return data === true;
   }
 
   async function refreshRoleNavigation() {
+    clearTimeout(roleRefreshTimer);
     try {
       const client = await getSupabaseClient();
       const { data: sessionData, error: sessionError } = await client.auth.getSession();
-
       if (sessionError) throw sessionError;
 
-      const user = sessionData.session?.user;
-      if (!user) {
+      if (!sessionData.session?.user) {
         removeAdministrationNavigation();
         return;
       }
 
-      const { data: profile, error: profileError } = await client
-        .schema('pedro')
-        .from('profiles')
-        .select('id, role')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      if (String(profile?.role || '').toLowerCase() === 'admin') {
-        addAdministrationNavigation();
-      } else {
+      const isAdmin = await databaseSaysAdmin(client);
+      if (!isAdmin) {
         removeAdministrationNavigation();
+        return;
+      }
+
+      if (!addAdministrationNavigation()) {
+        roleRefreshTimer = setTimeout(refreshRoleNavigation, 250);
       }
     } catch (error) {
       removeAdministrationNavigation();
@@ -106,12 +104,10 @@ window.PEDRO_CONFIG = {
 
   async function startRoleNavigation() {
     await refreshRoleNavigation();
-
     const client = await getSupabaseClient();
     client.auth.onAuthStateChange(() => {
-      setTimeout(refreshRoleNavigation, 0);
+      roleRefreshTimer = setTimeout(refreshRoleNavigation, 50);
     });
-
     window.addEventListener('focus', refreshRoleNavigation);
     window.pedroRefreshRoleNavigation = refreshRoleNavigation;
   }
