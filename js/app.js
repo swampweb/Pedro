@@ -11,7 +11,7 @@ function showScreen(name){$$('.screen').forEach(s=>s.classList.remove('active'))
 function enterLobby(email="Pedro Player"){showView('#app-view');showScreen('lobby');const label=email.split('@')[0]||'Pedro Player';$('#user-name').textContent=label;$('#profile-email').textContent=email;const i=label.slice(0,2).toUpperCase();$('#user-initials').textContent=i;$('#profile-initials').textContent=i;renderTables()}
 function renderTables(){const body=$('#table-rows');body.innerHTML=demoTables.map((t,i)=>`<div class="table-row"><div><b>${t.name}</b><small>${t.players==='4 / 4'?'Spectators allowed':'Seat available'}</small></div><span>${t.host}</span><span><i class="rule-pill">${t.rule}</i></span><span>${t.score}</span><span>${t.players}</span><button class="${t.players==='4 / 4'?'secondary':'join-button'}" data-join-index="${i}">${t.players==='4 / 4'?'WATCH':'JOIN'}</button></div>`).join('');$('#empty-tables').hidden=demoTables.length>0;$$('[data-join-index]').forEach(b=>b.addEventListener('click',()=>openGame(demoTables[Number(b.dataset.joinIndex)])))}
 function code(){return ['BAYOU','PEDRO','CAJUN','DELTA'][Math.floor(Math.random()*4)]+Math.floor(10+Math.random()*90)}
-function openGame(t){$('#game-table-name').textContent=t.name;$('#game-room-label').textContent=t.room?`Private Room · ${t.room}`:'Public Table';$('#game-rule').textContent=t.rule;$('#game-winning-score').textContent=t.score;showView('#game-view')}
+function openGame(t){window.pedroGame.open(t)}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const email=$('#login-email').value.trim(),password=$('#login-password').value;if(!email||!password)return setStatus('Enter both email and password.','error');setStatus('Signing in...');try{const c=await client();const{error}=await c.auth.signInWithPassword({email,password});if(error)throw error;setStatus('Sign-in successful.','success');enterLobby(email)}catch(x){setStatus(friendly(x),'error')}});
 $('#create-account').addEventListener('click',async()=>{const email=$('#login-email').value.trim(),password=$('#login-password').value;if(!email||!password)return setStatus('Enter an email and password first.','error');try{const c=await client();const{data,error}=await c.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;if(data.session)enterLobby(email);else setStatus('Account created. Check email to confirm it, then sign in.','success')}catch(x){setStatus(friendly(x),'error')}});
 $('#forgot-password').addEventListener('click',async()=>{const email=$('#login-email').value.trim();if(!email)return setStatus('Enter the account email first.','error');try{const c=await client();const{error}=await c.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;setStatus('Password-reset email sent.','success')}catch(x){setStatus(friendly(x),'error')}});
@@ -23,5 +23,63 @@ $('#winning-score').addEventListener('change',e=>$('#custom-score-field').hidden
 $('#new-room-code').addEventListener('click',()=>$('#room-code').value=code());
 $('#create-table-form').addEventListener('submit',e=>{e.preventDefault();const score=$('#winning-score').value==='custom'?Number($('#custom-score').value):Number($('#winning-score').value);if(!score||score<1)return toast('Enter a valid winning score');const t={name:$('#table-name').value.trim()||'Pedro Table',host:$('#user-name').textContent,rule:rule==='follow'?'Follow Suit':'Cut-Throat',score,players:'1 / 4',room:visibility==='private'?$('#room-code').value:''};if(visibility==='public')demoTables.unshift(t);openGame(t)});
 $('#join-table-form').addEventListener('submit',e=>{e.preventDefault();const room=$('#join-room-code').value.trim().toUpperCase();if(!room)return toast('Enter a room code');openGame({name:'Private Pedro Table',rule:'Follow Suit',score:52,room})});
-$('#refresh-tables').addEventListener('click',()=>{renderTables();toast('Tables refreshed')});$('#leave-table').addEventListener('click',()=>{showView('#app-view');showScreen('lobby')});$('#game-home').addEventListener('click',()=>{showView('#app-view');showScreen('lobby')});
+$('#refresh-tables').addEventListener('click',()=>{renderTables();toast('Tables refreshed')});
 (async()=>{$('#room-code').value=code();renderTables();try{const c=await client();const{data}=await c.auth.getSession();if(data.session)enterLobby(data.session.user.email);c.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_IN'&&session)enterLobby(session.user.email);if(event==='SIGNED_OUT')showView('#login-view')})}catch(e){setStatus(friendly(e),'error')}})();
+
+
+/* ===== Professional game room controller ===== */
+window.pedroGame=(()=>{
+  const seats={north:null,west:null,east:null,south:null};
+  const watchers=[];
+  let currentTable=null,currentUser='Pedro Player',selectedSeat=null,isWatcher=false,ready=false,phase='waiting',selectedCard=null,trump=null;
+  let hand=[];
+  const seatTeam={north:1,south:1,west:2,east:2};
+  const sampleNames=['BayouBritt','JFergo','PelicanAce'];
+  const deckRanks=['A','K','Q','J','10','9','8','7','6','5','4','3','2'];
+  const deckSuits=['♥','♦','♣','♠'];
+  const pointsFor=(rank,suit)=>rank==='5'?5:['A','J','10','2'].includes(rank)?1:0;
+
+  function name(){return $('#user-name')?.textContent||'Pedro Player'}
+  function initials(n){return n.split(/\s|@/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'P'}
+  function setPhase(value,label){phase=value;$('#phase-badge').textContent=label;$('#table-status').textContent=label.replace('WAITING FOR ','')}
+  function setMessage(m){$('#table-message').textContent=m}
+  function controls(id){['#host-game-buttons','#bid-controls','#trump-controls','#play-controls'].forEach(x=>$(x).classList.add('hidden'));if(id)$(id).classList.remove('hidden')}
+  function render(){
+    const count=Object.values(seats).filter(Boolean).length;
+    $('#player-count').textContent=`${count} / 4`;$('#spectator-count').textContent=watchers.length;$('#watcher-count').textContent=watchers.length;
+    $('#watcher-list').innerHTML=watchers.length?watchers.map(w=>`<div class="watcher-row"><span>${w}</span><b>Watching</b></div>`).join(''):'<p class="muted">No spectators</p>';
+    $('#player-roster').innerHTML=Object.entries(seats).map(([seat,n])=>`<div class="roster-row"><span><i></i> ${seat[0].toUpperCase()+seat.slice(1)}</span><b>${n||'Open Slot'}</b></div>`).join('');
+    $('#team1-names').textContent=`${seats.south||'Open'} + ${seats.north||'Open'}`;$('#team2-names').textContent=`${seats.west||'Open'} + ${seats.east||'Open'}`;
+    Object.entries(seats).forEach(([seat,n])=>{
+      const el=$(`[data-table-seat="${seat}"]`);el.classList.toggle('occupied',Boolean(n));$('.seat-avatar',el).textContent=n?initials(n):seat[0].toUpperCase();$('.seat-label b',el).textContent=n||'Open Slot';
+      const backs=$('.opponent-cards',el);if(backs)backs.innerHTML=n&&phase!=='waiting'&&n!==currentUser?'<i class="mini-back"></i><i class="mini-back"></i><i class="mini-back"></i><i class="mini-back"></i>':'';
+      const choice=$(`[data-seat="${seat}"]`);choice.classList.toggle('occupied',Boolean(n));choice.classList.toggle('selected',selectedSeat===seat);$(`#${seat}-choice-name`).textContent=n||'Open Slot';
+    });
+    $('#ready-button').disabled=!selectedSeat||isWatcher;$('#ready-button').textContent=ready?'READY ✓':'READY';$('#start-game').disabled=count<4||!ready;$('#deal-cards').disabled=count<4;
+  }
+  function chooseSeat(seat){
+    if(phase!=='waiting')return;if(seats[seat]&&seats[seat]!==currentUser)return toast('That seat is occupied');
+    Object.keys(seats).forEach(s=>{if(seats[s]===currentUser)seats[s]=null});
+    const wi=watchers.indexOf(currentUser);if(wi>=0)watchers.splice(wi,1);isWatcher=false;seats[seat]=currentUser;selectedSeat=seat;ready=false;setMessage(`${seat[0].toUpperCase()+seat.slice(1)} seat selected. Mark ready when prepared.`);render();
+  }
+  function watch(){Object.keys(seats).forEach(s=>{if(seats[s]===currentUser)seats[s]=null});if(!watchers.includes(currentUser))watchers.push(currentUser);selectedSeat=null;isWatcher=true;ready=false;setMessage('You are watching this table.');render()}
+  function fillDemo(){let i=0;Object.keys(seats).forEach(s=>{if(!seats[s]&&sampleNames[i])seats[s]=sampleNames[i++]});render();setMessage('All seats are filled. Players can now ready up.')}
+  function start(){if(Object.values(seats).filter(Boolean).length<4)return toast('Four players are required');$('#waiting-panel').classList.add('hidden');setPhase('ready','READY TO DEAL');controls('#host-game-buttons');$('#deck-stack').classList.remove('hidden');setMessage('All players are seated. Host may deal the first hand.');render()}
+  function buildHand(){const shuffled=[];for(const suit of deckSuits)for(const rank of deckRanks)shuffled.push({id:`${suit}${rank}`,rank,suit,points:pointsFor(rank,suit)});shuffled.sort(()=>Math.random()-.5);return shuffled.slice(0,9)}
+  function renderHand(animate=false){$('#player-hand').innerHTML=hand.map((c,i)=>`<button class="hand-card ${(c.suit==='♥'||c.suit==='♦')?'red':''} ${animate?'dealt':''}" draggable="true" data-card="${c.id}" data-index="${i}" style="--rotation:${(i-(hand.length-1)/2)*2.2}deg;--index:${i}"><span class="card-corner">${c.rank}<br>${c.suit}</span><span class="card-suit">${c.suit}</span>${c.points?`<span class="point-badge">${c.points} PT</span>`:''}</button>`).join('');
+    $$('.hand-card').forEach(card=>{card.addEventListener('click',()=>selectCard(card.dataset.card));card.addEventListener('dragstart',()=>card.dataset.dragging='1');card.addEventListener('dragover',e=>e.preventDefault());card.addEventListener('drop',()=>{const from=$('.hand-card[data-dragging="1"]');if(!from)return;const [item]=hand.splice(Number(from.dataset.index),1);hand.splice(Number(card.dataset.index),0,item);renderHand()})})
+  }
+  function deal(){if(!selectedSeat)return toast('Choose a seat before dealing');setPhase('bidding','BIDDING');$('#deck-stack').classList.add('hidden');hand=buildHand();renderHand(true);controls('#bid-controls');setMessage('Cards dealt. Bid 7–14 or pass.');render()}
+  function bid(value){if(value==='pass'){setMessage('You passed. Demo advances you as the next bidder.');return}$('#winning-bid').textContent=value;setPhase('trump','CHOOSE TRUMP');controls('#trump-controls');setMessage(`Bid ${value} accepted. Choose the trump suit.`)}
+  function chooseTrump(suit){trump=suit;$('#trump-label').textContent=suit;setPhase('playing','PLAYING');controls('#play-controls');setMessage(`${suit} are trump. Arrange your hand and select a card to play.`);render()}
+  function selectCard(id){selectedCard=selectedCard===id?null:id;$$('.hand-card').forEach(c=>c.classList.toggle('selected',c.dataset.card===selectedCard));$('#play-selected').disabled=!selectedCard}
+  function play(){const idx=hand.findIndex(c=>c.id===selectedCard);if(idx<0)return;const [card]=hand.splice(idx,1);const pos=$$('#trick-zone .played-card').length%4;const el=document.createElement('div');el.className=`played-card ${(card.suit==='♥'||card.suit==='♦')?'red':''} pos-${pos}`;el.textContent=`${card.rank}${card.suit}`;$('#trick-zone').appendChild(el);selectedCard=null;renderHand();$('#play-selected').disabled=true;setMessage(`${card.rank}${card.suit} played. Waiting for the next player.`);$('#trick-number').textContent=`${Math.min(6,Math.ceil((9-hand.length)/4))} / 6`}
+  function sort(){const order=trump==='Hearts'?'♥':trump==='Diamonds'?'♦':trump==='Clubs'?'♣':'♠';hand.sort((a,b)=>(b.suit===order)-(a.suit===order)||b.points-a.points);renderHand();toast('Hand sorted')}
+  function remove(){if(!confirm('Delete this table and return to the lobby?'))return;leave()}
+  function leave(){Object.keys(seats).forEach(s=>seats[s]=null);watchers.length=0;hand=[];$('#player-hand').innerHTML='';$('#trick-zone').innerHTML='<div class="table-watermark">PEDRO</div>';$('#waiting-panel').classList.remove('hidden');controls('#host-game-buttons');showView('#app-view');showScreen('lobby')}
+  function open(t){currentTable=t;currentUser=name();Object.keys(seats).forEach(s=>seats[s]=null);watchers.length=0;selectedSeat=null;isWatcher=false;ready=false;hand=[];trump=null;$('#player-hand').innerHTML='';$('#trick-zone').innerHTML='<div class="table-watermark">PEDRO</div>';$('#waiting-panel').classList.remove('hidden');$('#game-table-name').textContent=t.name;$('#game-room-label').textContent=t.room?`Private Room · ${t.room}`:'Public Table';$('#table-host').textContent=currentUser;$('#table-visibility').textContent=t.room?'Private':'Public';$('#game-rule').textContent=t.rule;$('#game-winning-score').textContent=t.score;$('#score-goal').textContent=`Race to ${t.score}`;$('#remove-table').style.display='block';setPhase('waiting','WAITING FOR PLAYERS');controls('#host-game-buttons');setMessage('Choose a seat, select random, or watch the table.');showView('#game-view');render()}
+  document.addEventListener('DOMContentLoaded',()=>{
+    $$('.seat-choice').forEach(b=>b.addEventListener('click',()=>chooseSeat(b.dataset.seat)));$('#random-seat').addEventListener('click',()=>{const open=Object.keys(seats).filter(s=>!seats[s]);if(!open.length)return toast('No open seats');chooseSeat(open[Math.floor(Math.random()*open.length)])});$('#watch-table').addEventListener('click',watch);$('#ready-button').addEventListener('click',()=>{ready=!ready;render();setMessage(ready?'You are ready. Waiting for the host.':'Ready status removed.')});$('#fill-demo-players').addEventListener('click',fillDemo);$('#start-game').addEventListener('click',start);$('#deal-cards').addEventListener('click',deal);$$('.bid-button').forEach(b=>b.addEventListener('click',()=>bid(b.dataset.bid)));$$('.suit-button').forEach(b=>b.addEventListener('click',()=>chooseTrump(b.dataset.suit)));$('#play-selected').addEventListener('click',play);$('#sort-hand').addEventListener('click',sort);$('#remove-table').addEventListener('click',remove);$('#leave-table').addEventListener('click',leave);$('#game-home').addEventListener('click',leave)
+  });
+  return{open};
+})();

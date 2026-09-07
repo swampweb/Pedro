@@ -97,15 +97,67 @@
   </section>
 
   <section id="game-view" class="view game-view">
-    <header class="topbar">
+    <header class="topbar game-topbar">
       <button id="game-home" class="brand-button"><img src="assets/logo/pedro_logo_horizontal.png" alt=""><span>PEDRO<small>ONLINE</small></span></button>
       <div class="game-title"><b id="game-table-name">Pedro Table</b><small id="game-room-label"></small></div>
-      <button id="leave-table" class="secondary">LEAVE TABLE</button>
+      <div class="game-header-actions"><span id="phase-badge" class="phase-badge">WAITING FOR PLAYERS</span><button id="leave-table" class="secondary">LEAVE TABLE</button></div>
     </header>
-    <main class="game-shell">
-      <aside class="panel game-info"><p class="eyebrow">MATCH</p><div class="score-card"><span>Team 1</span><b>0</b></div><div class="score-card blue"><span>Team 2</span><b>0</b></div></aside>
-      <section class="felt-table"><div class="seat north">Player 3</div><div class="seat west">Player 2</div><div class="seat east">Player 4</div><div class="center-mark">PEDRO</div><div class="you-seat">YOU</div></section>
-      <aside class="panel game-info"><p class="eyebrow">TABLE RULES</p><div class="fact"><span>Play style</span><b id="game-rule">Follow Suit</b></div><div class="fact"><span>Winning score</span><b id="game-winning-score">52</b></div></aside>
+
+    <main class="game-room">
+      <aside class="panel game-sidebar scoreboard-panel">
+        <div class="panel-title"><span>MATCH SCORE</span><b id="score-goal">Race to 52</b></div>
+        <div class="team-score team-one"><div><small>TEAM 1</small><strong id="team1-names">South + North</strong></div><b id="team1-score">0</b></div>
+        <div class="team-score team-two"><div><small>TEAM 2</small><strong id="team2-names">West + East</strong></div><b id="team2-score">0</b></div>
+        <div class="hand-score"><span>Current hand</span><div><b id="team1-hand">0</b><i>–</i><b id="team2-hand">0</b></div></div>
+        <div class="game-facts">
+          <div><span>Dealer</span><b id="dealer-seat">South</b></div>
+          <div><span>Bid</span><b id="winning-bid">—</b></div>
+          <div><span>Trump</span><b id="trump-label">—</b></div>
+          <div><span>Trick</span><b id="trick-number">0 / 6</b></div>
+        </div>
+        <div class="side-section"><h3>Players</h3><div id="player-roster" class="roster"></div></div>
+        <div class="side-section"><h3>Watching <span id="watcher-count">0</span></h3><div id="watcher-list" class="watcher-list"><p class="muted">No spectators</p></div></div>
+      </aside>
+
+      <section class="table-column">
+        <div id="waiting-panel" class="waiting-panel panel">
+          <div class="waiting-copy"><p class="eyebrow gold">TABLE LOBBY</p><h2>Choose a seat or watch</h2><p>Partners sit across from each other. Team 1 uses the North and South seats. Team 2 uses the East and West seats.</p></div>
+          <div class="seat-choice-grid">
+            <button class="seat-choice team-one-choice" data-seat="north"><span>TEAM 1</span><b>North Seat</b><small id="north-choice-name">Open Slot</small></button>
+            <button class="seat-choice team-two-choice" data-seat="west"><span>TEAM 2</span><b>West Seat</b><small id="west-choice-name">Open Slot</small></button>
+            <button class="seat-choice team-two-choice" data-seat="east"><span>TEAM 2</span><b>East Seat</b><small id="east-choice-name">Open Slot</small></button>
+            <button class="seat-choice team-one-choice" data-seat="south"><span>TEAM 1</span><b>South Seat</b><small id="south-choice-name">Open Slot</small></button>
+          </div>
+          <div class="waiting-actions"><button id="random-seat" class="secondary">RANDOM SEAT</button><button id="watch-table" class="secondary">WATCH TABLE</button><button id="ready-button" class="primary" disabled>READY</button></div>
+          <div id="host-controls" class="host-controls"><span>You are the host</span><button id="fill-demo-players" class="secondary">FILL OPEN SEATS</button><button id="start-game" class="primary" disabled>START GAME</button></div>
+        </div>
+
+        <div id="felt-table" class="professional-table">
+          <div class="table-rail"></div>
+          <div id="deck-stack" class="deck-stack hidden"><i></i><i></i><i></i></div>
+          <div class="seat-position north-seat" data-table-seat="north"><div class="seat-avatar">N</div><div class="seat-label"><b>Open Slot</b><small>Team 1 · North</small></div><div class="opponent-cards"></div></div>
+          <div class="seat-position west-seat" data-table-seat="west"><div class="seat-avatar">W</div><div class="seat-label"><b>Open Slot</b><small>Team 2 · West</small></div><div class="opponent-cards"></div></div>
+          <div class="seat-position east-seat" data-table-seat="east"><div class="seat-avatar">E</div><div class="seat-label"><b>Open Slot</b><small>Team 2 · East</small></div><div class="opponent-cards"></div></div>
+          <div class="seat-position south-seat" data-table-seat="south"><div class="seat-avatar">S</div><div class="seat-label"><b>Open Slot</b><small>Team 1 · South</small></div><div class="opponent-cards"></div></div>
+          <div id="trick-zone" class="trick-zone"><div class="table-watermark">PEDRO</div></div>
+          <div id="player-hand" class="player-hand"></div>
+        </div>
+
+        <div id="game-controls" class="panel game-controls">
+          <div class="control-message"><p class="eyebrow gold">TABLE MESSAGE</p><b id="table-message">Choose a seat to join the table.</b></div>
+          <div id="host-game-buttons" class="control-buttons"><button id="deal-cards" class="primary" disabled>DEAL CARDS</button></div>
+          <div id="bid-controls" class="control-buttons hidden"><button class="secondary bid-button" data-bid="pass">PASS</button><button class="secondary bid-button" data-bid="7">7</button><button class="secondary bid-button" data-bid="8">8</button><button class="secondary bid-button" data-bid="9">9</button><button class="secondary bid-button" data-bid="10">10</button><button class="secondary bid-button" data-bid="11">11</button><button class="secondary bid-button" data-bid="12">12</button><button class="secondary bid-button" data-bid="13">13</button><button class="primary bid-button" data-bid="14">14</button></div>
+          <div id="trump-controls" class="control-buttons hidden"><button class="suit-button red-suit" data-suit="Hearts">♥ Hearts</button><button class="suit-button black-suit" data-suit="Spades">♠ Spades</button><button class="suit-button red-suit" data-suit="Diamonds">♦ Diamonds</button><button class="suit-button black-suit" data-suit="Clubs">♣ Clubs</button></div>
+          <div id="play-controls" class="control-buttons hidden"><button id="sort-hand" class="secondary">SORT TRUMP</button><button id="play-selected" class="primary" disabled>PLAY SELECTED CARD</button></div>
+        </div>
+      </section>
+
+      <aside class="panel game-sidebar table-info-panel">
+        <div class="panel-title"><span>TABLE INFO</span><b id="table-status">Open</b></div>
+        <div class="table-info-list"><div><span>Host</span><b id="table-host">—</b></div><div><span>Visibility</span><b id="table-visibility">Public</b></div><div><span>Play style</span><b id="game-rule">Follow Suit</b></div><div><span>Winning score</span><b id="game-winning-score">52</b></div><div><span>Players</span><b id="player-count">0 / 4</b></div><div><span>Spectators</span><b id="spectator-count">0</b></div></div>
+        <div class="side-section"><h3>Hand History</h3><div id="hand-history" class="history-list"><p class="muted">No completed hands</p></div></div>
+        <div class="side-section"><h3>Host Options</h3><div class="admin-actions"><button id="remove-table" class="danger-button">DELETE TABLE</button></div></div>
+      </aside>
     </main>
   </section>
 
