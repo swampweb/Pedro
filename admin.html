@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070b0d">
+  <title>Pedro Administration</title>
+  <link rel="icon" type="image/png" href="assets/logo/pedro_favicon.png">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <header class="admin-topbar">
+    <a class="admin-brand" href="index.html"><img src="assets/logo/pedro_logo_horizontal.png" alt="Pedro"><span>PEDRO<small>ADMINISTRATION</small></span></a>
+    <div class="admin-account"><span id="admin-avatar">A</span><div><b id="admin-name">Administrator</b><small id="admin-email"></small></div></div>
+  </header>
+  <main id="admin-app" class="admin-shell" hidden>
+    <aside class="admin-sidebar">
+      <a href="index.html">Back to Lobby</a>
+      <button class="active" type="button">User Management</button>
+      <button type="button" disabled>Table Management</button>
+      <button type="button" disabled>Tournament Management</button>
+    </aside>
+    <section class="admin-content">
+      <section class="admin-hero">
+        <div><p>ADMINISTRATION</p><h1>Pedro Control Center</h1><span>Manage registered accounts and assign Admin or User roles.</span></div>
+        <button id="refresh-users" type="button">Refresh Users</button>
+      </section>
+      <section class="admin-stats">
+        <article><span>Total Users</span><b id="total-users">0</b></article>
+        <article><span>Administrators</span><b id="total-admins">0</b></article>
+        <article><span>Standard Users</span><b id="total-standard">0</b></article>
+      </section>
+      <section class="user-management">
+        <div class="section-heading"><div><p>USER MANAGEMENT</p><h2>Accounts and Roles</h2></div><label>Search<input id="user-search" type="search" placeholder="Name or email"></label></div>
+        <p id="admin-status">Loading users...</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Member Since</th><th>Action</th></tr></thead>
+            <tbody id="user-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+  <section id="access-message" class="access-message"><h1>Checking Administrator Access</h1><p>Please sign in through Pedro before opening Administration.</p><a href="index.html">Return to Pedro</a></section>
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
