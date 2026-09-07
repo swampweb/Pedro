@@ -1,89 +1,27 @@
-const $ = (s, root = document) => root.querySelector(s);
-const $$ = (s, root = document) => [...root.querySelectorAll(s)];
-const state = { visibility: "private", rule: "follow", selected: null, dragging: null };
-const headings = { lobby: "Game Lobby", create: "Create Table", join: "Join Table", tournaments: "Tournaments", profile: "Player Profile" };
-const cards = [
-  { id:"h5", rank:"5", suit:"♥", label:"HIGH PEDRO", points:5, trump:true },
-  { id:"d5", rank:"5", suit:"♦", label:"LOW PEDRO", points:5, trump:true },
-  { id:"ha", rank:"A", suit:"♥", points:1, trump:true },
-  { id:"hk", rank:"K", suit:"♥", trump:true },
-  { id:"hq", rank:"Q", suit:"♥", trump:true },
-  { id:"hj", rank:"J", suit:"♥", points:1, trump:true },
-  { id:"h10", rank:"10", suit:"♥", points:1, trump:true },
-  { id:"ca", rank:"A", suit:"♣", points:1 },
-  { id:"ck", rank:"K", suit:"♣" }
-];
-let hand = [...cards];
-let playedCount = 0;
-
-function toast(message) { const el = $("#toast"); el.textContent = message; el.classList.add("show"); setTimeout(() => el.classList.remove("show"), 2200); }
-function activateView(id) { $$(".view").forEach(v => v.classList.remove("active")); $(id).classList.add("active"); window.scrollTo(0,0); }
-function showScreen(name) {
-  $$(".screen").forEach(s => s.classList.remove("active"));
-  $("#screen-" + name).classList.add("active");
-  $$(".nav-button").forEach(b => b.classList.toggle("active", b.dataset.screen === name));
-  $("#page-heading").textContent = headings[name] || "Pedro Online";
-}
-function enterApp() { activateView("#app-view"); showScreen("lobby"); }
-
-$("#login-form").addEventListener("submit", e => {
-  e.preventDefault();
-  const config = window.PEDRO_CONFIG || {};
-  if (!config.supabaseUrl || !config.supabaseAnonKey) {
-    toast("Supabase authentication is not connected yet.");
-    return;
-  }
-  toast("Authentication setup is not active in this visual build.");
-});
-const createAccountButton = $("#create-account");
-if (createAccountButton) createAccountButton.addEventListener("click", () => {
-  toast("Account creation will be enabled with Supabase authentication.");
-});
-$("#sign-out").addEventListener("click", () => activateView("#login-view"));
-$$('[data-screen]').forEach(b => b.addEventListener("click", () => showScreen(b.dataset.screen)));
-$("#refresh-tables").addEventListener("click", () => toast("Table list refreshed"));
-
-$$('[data-visibility]').forEach(b => b.addEventListener("click", () => {
-  state.visibility = b.dataset.visibility;
-  $$('[data-visibility]').forEach(x => x.classList.toggle("selected", x === b));
-  $("#room-code-wrap").hidden = state.visibility !== "private";
-}));
-$$('[data-rule]').forEach(b => b.addEventListener("click", () => {
-  state.rule = b.dataset.rule;
-  $$('[data-rule]').forEach(x => x.classList.toggle("selected", x === b));
-}));
-function makeCode(){ return ["BAYOU","PEDRO","CAJUN","DELTA"][Math.floor(Math.random()*4)] + Math.floor(10+Math.random()*89); }
-$("#new-code").addEventListener("click", () => $("#room-code").value = makeCode());
-$("#create-table-form").addEventListener("submit", e => { e.preventDefault(); startGame(); });
-$("#join-private").addEventListener("click", () => { if (!$("#join-code").value.trim()) return toast("Enter a private room code"); startGame(); });
-$$(".play-demo").forEach(b => b.addEventListener("click", startGame));
-
-function cardMarkup(card) {
-  const red = card.suit === "♥" || card.suit === "♦";
-  return `<button class="playing-card ${red ? "red" : "black"}" data-id="${card.id}" draggable="true"><span class="corner">${card.rank}<i>${card.suit}</i></span><strong>${card.suit}</strong>${card.label ? `<em>${card.label}</em>` : ""}${card.points ? `<b>${card.points} PT</b>` : ""}</button>`;
-}
-function renderHand(animate = false) {
-  const area = $("#player-hand");
-  area.innerHTML = hand.map((c,i) => `<div class="hand-card ${animate ? "dealt" : ""}" data-index="${i}" style="--i:${i};--r:${(i-(hand.length-1)/2)*2.2}deg">${cardMarkup(c)}</div>`).join("");
-  $$(".hand-card", area).forEach(w => {
-    const button = $(".playing-card", w);
-    button.addEventListener("click", () => selectCard(button.dataset.id));
-    button.addEventListener("dragstart", () => state.dragging = Number(w.dataset.index));
-    w.addEventListener("dragover", e => e.preventDefault());
-    w.addEventListener("drop", () => reorder(Number(w.dataset.index)));
-  });
-}
-function renderOpponents() { $$(".opponent-hand").forEach(h => h.innerHTML = Array.from({length:Number(h.dataset.count)},(_,i)=>`<i class="card-back" style="--i:${i}"></i>`).join("")); }
-function selectCard(id) { state.selected = state.selected === id ? null : id; $$(".playing-card").forEach(c => c.classList.toggle("selected", c.dataset.id === state.selected)); $("#play-card").disabled = !state.selected; const card=hand.find(c=>c.id===state.selected); $("#table-message").textContent = card ? `${card.rank}${card.suit} selected. Drag cards to change their order.` : "Drag cards to arrange your hand, or select a card to play."; }
-function reorder(to) { if (state.dragging === null || state.dragging === to) return; const [moved] = hand.splice(state.dragging,1); hand.splice(to,0,moved); state.dragging=null; renderHand(); toast("Hand order updated"); }
-function playSelected() { const index=hand.findIndex(c=>c.id===state.selected); if(index<0)return; const [card]=hand.splice(index,1); const holder=document.createElement("div"); holder.className=`played-card played-${Math.min(playedCount,3)}`; holder.innerHTML=cardMarkup(card); $("#trick-area").appendChild(holder); playedCount++; state.selected=null; renderHand(); $("#play-card").disabled=true; $("#table-message").textContent=`${card.rank}${card.suit} played to the trick.`; if(playedCount===4)setTimeout(clearTrick,1100); }
-function clearTrick(){ $("#trick-area").classList.add("collecting"); setTimeout(()=>{ $("#trick-area").innerHTML=""; $("#trick-area").classList.remove("collecting"); playedCount=0; $("#table-message").textContent="Trick collected. Waiting for the next lead."; },650); }
-function dealDemo(){ hand=[]; renderHand(); $("#trick-area").innerHTML=""; playedCount=0; $("#deal-deck").classList.add("show"); $("#table-message").textContent="Dealer is shuffling and dealing..."; setTimeout(()=>{ hand=[...cards]; renderHand(true); $("#deal-deck").classList.remove("show"); $("#table-message").textContent="Cards dealt. Drag cards to arrange your hand."; },800); }
-function sortTrump(){ hand.sort((a,b)=>Number(Boolean(b.trump))-Number(Boolean(a.trump)) || b.points-a.points); renderHand(); toast("Trump cards moved together"); }
-function startGame(){ $("#game-table-name").textContent=$("#table-name").value || "Bayou Good Times"; $("#game-room-code").textContent=$("#room-code").value || "BAYOU24"; $("#game-rule").textContent=state.rule==="follow"?"Follow Suit":"Cut-Throat"; hand=[...cards]; state.selected=null; playedCount=0; $("#trick-area").innerHTML=""; renderHand(true); renderOpponents(); activateView("#game-view"); }
-$("#play-card").addEventListener("click", playSelected);
-$("#deal-demo").addEventListener("click", dealDemo);
-$("#sort-trump").addEventListener("click", sortTrump);
-$("#leave-table").addEventListener("click", () => { activateView("#app-view"); showScreen("lobby"); });
-$("#game-logo").addEventListener("click", () => { activateView("#app-view"); showScreen("lobby"); });
-renderOpponents();
+const $=(s,r=document)=>r.querySelector(s);const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const config=window.PEDRO_CONFIG||{};let sb=null;let visibility="private",rule="follow";
+const demoTables=[{name:"Bayou Table 1",host:"PoppaT",rule:"Follow Suit",score:52,players:"3 / 4"},{name:"Cajun Crew",host:"Lafitte",rule:"Cut-Throat",score:104,players:"2 / 4"},{name:"Golden Meadow",host:"TroutMan",rule:"Follow Suit",score:52,players:"4 / 4"},{name:"Thibodaux Kings",host:"RedFish",rule:"Cut-Throat",score:52,players:"1 / 4"}];
+const titles={lobby:"Game Lobby",create:"Create Table",join:"Join Table",tournaments:"Tournaments",profile:"Profile"};
+function toast(m){const e=$("#toast");e.textContent=m;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),1800)}
+function setStatus(m,t="info"){const e=$("#auth-status");e.textContent=m;e.style.color=t==="error"?"#ff827a":t==="success"?"#76d99a":"#d8b45b"}
+function friendly(e){const m=String(e?.message||"Something went wrong.");if(/invalid login credentials/i.test(m))return"Incorrect email address or password.";if(/email not confirmed/i.test(m))return"Confirm the account from the email sent by Pedro, then sign in.";return m}
+async function client(){if(sb)return sb;if(!window.supabase?.createClient){await new Promise((ok,no)=>{const s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";s.onload=ok;s.onerror=no;document.head.appendChild(s)})}sb=window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});return sb}
+function showView(id){$$('.view').forEach(v=>v.classList.remove('active'));$(id).classList.add('active');window.scrollTo(0,0)}
+function showScreen(name){$$('.screen').forEach(s=>s.classList.remove('active'));$('#screen-'+name).classList.add('active');$$('.nav-button[data-screen]').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));$('#page-title').textContent=titles[name]||'Pedro Online'}
+function enterLobby(email="Pedro Player"){showView('#app-view');showScreen('lobby');const label=email.split('@')[0]||'Pedro Player';$('#user-name').textContent=label;$('#profile-email').textContent=email;const i=label.slice(0,2).toUpperCase();$('#user-initials').textContent=i;$('#profile-initials').textContent=i;renderTables()}
+function renderTables(){const body=$('#table-rows');body.innerHTML=demoTables.map((t,i)=>`<div class="table-row"><div><b>${t.name}</b><small>${t.players==='4 / 4'?'Spectators allowed':'Seat available'}</small></div><span>${t.host}</span><span><i class="rule-pill">${t.rule}</i></span><span>${t.score}</span><span>${t.players}</span><button class="${t.players==='4 / 4'?'secondary':'join-button'}" data-join-index="${i}">${t.players==='4 / 4'?'WATCH':'JOIN'}</button></div>`).join('');$('#empty-tables').hidden=demoTables.length>0;$$('[data-join-index]').forEach(b=>b.addEventListener('click',()=>openGame(demoTables[Number(b.dataset.joinIndex)])))}
+function code(){return ['BAYOU','PEDRO','CAJUN','DELTA'][Math.floor(Math.random()*4)]+Math.floor(10+Math.random()*90)}
+function openGame(t){$('#game-table-name').textContent=t.name;$('#game-room-label').textContent=t.room?`Private Room · ${t.room}`:'Public Table';$('#game-rule').textContent=t.rule;$('#game-winning-score').textContent=t.score;showView('#game-view')}
+$('#login-form').addEventListener('submit',async e=>{e.preventDefault();const email=$('#login-email').value.trim(),password=$('#login-password').value;if(!email||!password)return setStatus('Enter both email and password.','error');setStatus('Signing in...');try{const c=await client();const{error}=await c.auth.signInWithPassword({email,password});if(error)throw error;setStatus('Sign-in successful.','success');enterLobby(email)}catch(x){setStatus(friendly(x),'error')}});
+$('#create-account').addEventListener('click',async()=>{const email=$('#login-email').value.trim(),password=$('#login-password').value;if(!email||!password)return setStatus('Enter an email and password first.','error');try{const c=await client();const{data,error}=await c.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;if(data.session)enterLobby(email);else setStatus('Account created. Check email to confirm it, then sign in.','success')}catch(x){setStatus(friendly(x),'error')}});
+$('#forgot-password').addEventListener('click',async()=>{const email=$('#login-email').value.trim();if(!email)return setStatus('Enter the account email first.','error');try{const c=await client();const{error}=await c.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;setStatus('Password-reset email sent.','success')}catch(x){setStatus(friendly(x),'error')}});
+$('#sign-out').addEventListener('click',async()=>{try{(await client()).auth.signOut()}finally{showView('#login-view')}});
+$$('[data-screen]').forEach(b=>b.addEventListener('click',()=>showScreen(b.dataset.screen)));
+$$('[data-visibility]').forEach(b=>b.addEventListener('click',()=>{visibility=b.dataset.visibility;$$('[data-visibility]').forEach(x=>x.classList.toggle('selected',x===b));$('#room-code-field').hidden=visibility==='public'}));
+$$('[data-rule]').forEach(b=>b.addEventListener('click',()=>{rule=b.dataset.rule;$$('[data-rule]').forEach(x=>x.classList.toggle('selected',x===b))}));
+$('#winning-score').addEventListener('change',e=>$('#custom-score-field').hidden=e.target.value!=='custom');
+$('#new-room-code').addEventListener('click',()=>$('#room-code').value=code());
+$('#create-table-form').addEventListener('submit',e=>{e.preventDefault();const score=$('#winning-score').value==='custom'?Number($('#custom-score').value):Number($('#winning-score').value);if(!score||score<1)return toast('Enter a valid winning score');const t={name:$('#table-name').value.trim()||'Pedro Table',host:$('#user-name').textContent,rule:rule==='follow'?'Follow Suit':'Cut-Throat',score,players:'1 / 4',room:visibility==='private'?$('#room-code').value:''};if(visibility==='public')demoTables.unshift(t);openGame(t)});
+$('#join-table-form').addEventListener('submit',e=>{e.preventDefault();const room=$('#join-room-code').value.trim().toUpperCase();if(!room)return toast('Enter a room code');openGame({name:'Private Pedro Table',rule:'Follow Suit',score:52,room})});
+$('#refresh-tables').addEventListener('click',()=>{renderTables();toast('Tables refreshed')});$('#leave-table').addEventListener('click',()=>{showView('#app-view');showScreen('lobby')});$('#game-home').addEventListener('click',()=>{showView('#app-view');showScreen('lobby')});
+(async()=>{$('#room-code').value=code();renderTables();try{const c=await client();const{data}=await c.auth.getSession();if(data.session)enterLobby(data.session.user.email);c.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_IN'&&session)enterLobby(session.user.email);if(event==='SIGNED_OUT')showView('#login-view')})}catch(e){setStatus(friendly(e),'error')}})();
