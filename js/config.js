@@ -1,178 +1,23 @@
-/* Pedro public browser configuration and role-aware navigation.
-   Browser-safe public anon key only. Never use service_role here. */
-window.PEDRO_CONFIG = {
-  supabaseUrl: "https://rjezpgaawtufrxxnibxf.supabase.co",
-  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZXpwZ2Fhd3R1ZnJ4eG5pYnhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDM5ODEsImV4cCI6MjEwNDMxOTk4MX0.tDMRuV6_Ov0WCPVeoHkaDAGwTKoRrIak4I7cwA7zIIU"
-};
-
-(() => {
-  let libraryPromise = null;
-  let roleRefreshTimer = null;
-
-  function applyCompactLobbyLayout() {
-    if (document.querySelector('#pedro-compact-layout')) return;
-    const style = document.createElement('style');
-    style.id = 'pedro-compact-layout';
-    style.textContent = `
-      .content { padding-top: 0 !important; }
-      .lobby-hero, .hero {
-        min-height: 108px !important;
-        padding: 18px 24px !important;
-        border-radius: 12px !important;
-      }
-      .lobby-hero .eyebrow, .hero .eyebrow {
-        margin-bottom: 5px !important;
-        font-size: 9px !important;
-      }
-      .lobby-hero h2, .hero h2 {
-        margin: 0 0 6px !important;
-        font-size: 28px !important;
-        line-height: 1.05 !important;
-      }
-      .lobby-hero p:last-child, .hero p:last-child {
-        margin: 0 !important;
-        font-size: 12px !important;
-      }
-      .hero-actions button, .lobby-hero button {
-        min-height: 40px !important;
-        padding: 0 16px !important;
-        font-size: 11px !important;
-      }
-      .section-heading {
-        margin: 18px 4px 9px !important;
-      }
-      .section-heading .eyebrow {
-        margin-bottom: 4px !important;
-        font-size: 9px !important;
-      }
-      .section-heading h2, .section-heading h3 {
-        font-size: 23px !important;
-        line-height: 1.05 !important;
-      }
-      .section-heading .secondary, #refresh-tables {
-        min-height: 38px !important;
-        padding: 0 14px !important;
-        font-size: 11px !important;
-      }
-      .table-row {
-        padding-top: 12px !important;
-        padding-bottom: 12px !important;
-      }
-      @media (max-width: 650px) {
-        .lobby-hero, .hero { padding: 16px !important; }
-        .lobby-hero h2, .hero h2 { font-size: 24px !important; }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function loadSupabaseLibrary() {
-    if (window.supabase?.createClient) return Promise.resolve();
-    if (libraryPromise) return libraryPromise;
-    libraryPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Unable to load the Supabase browser library.'));
-      document.head.appendChild(script);
-    });
-    return libraryPromise;
-  }
-
-  async function getSupabaseClient() {
-    await loadSupabaseLibrary();
-    if (window.pedroSupabase) return window.pedroSupabase;
-    window.pedroSupabase = window.supabase.createClient(
-      window.PEDRO_CONFIG.supabaseUrl,
-      window.PEDRO_CONFIG.supabaseAnonKey,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      }
-    );
-    return window.pedroSupabase;
-  }
-
-  function findProfileNavigation() {
-    return [...document.querySelectorAll('.nav-button')]
-      .find(element => element.textContent.trim().toLowerCase() === 'profile');
-  }
-
-  function removeAdministrationNavigation() {
-    document.querySelector('#nav-admin-link')?.remove();
-  }
-
-  function addAdministrationNavigation() {
-    if (document.querySelector('#nav-admin-link')) return true;
-    const profileButton = findProfileNavigation();
-    if (!profileButton) return false;
-
-    const adminLink = document.createElement('a');
-    adminLink.id = 'nav-admin-link';
-    adminLink.className = 'nav-button';
-    adminLink.href = 'admin.html';
-    adminLink.textContent = 'Administration';
-    adminLink.setAttribute('aria-label', 'Open Pedro Administration');
-    adminLink.style.display = 'flex';
-    adminLink.style.alignItems = 'center';
-    adminLink.style.textDecoration = 'none';
-    profileButton.insertAdjacentElement('afterend', adminLink);
-    return true;
-  }
-
-  async function databaseSaysAdmin(client) {
-    const { data, error } = await client
-      .schema('pedro')
-      .rpc('is_admin');
-
-    if (error) throw error;
-    return data === true;
-  }
-
-  async function refreshRoleNavigation() {
-    clearTimeout(roleRefreshTimer);
-    try {
-      const client = await getSupabaseClient();
-      const { data: sessionData, error: sessionError } = await client.auth.getSession();
-      if (sessionError) throw sessionError;
-
-      if (!sessionData.session?.user) {
-        removeAdministrationNavigation();
-        return;
-      }
-
-      const isAdmin = await databaseSaysAdmin(client);
-      if (!isAdmin) {
-        removeAdministrationNavigation();
-        return;
-      }
-
-      if (!addAdministrationNavigation()) {
-        roleRefreshTimer = setTimeout(refreshRoleNavigation, 250);
-      }
-    } catch (error) {
-      removeAdministrationNavigation();
-      console.error('Pedro Admin navigation failed:', error);
-    }
-  }
-
-  async function startRoleNavigation() {
-    applyCompactLobbyLayout();
-    await refreshRoleNavigation();
-    const client = await getSupabaseClient();
-    client.auth.onAuthStateChange(() => {
-      roleRefreshTimer = setTimeout(refreshRoleNavigation, 50);
-    });
-    window.addEventListener('focus', refreshRoleNavigation);
-    window.pedroRefreshRoleNavigation = refreshRoleNavigation;
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startRoleNavigation, { once: true });
-  } else {
-    startRoleNavigation();
-  }
-})();
+window.PEDRO_CONFIG={supabaseUrl:"https://rjezpgaawtufrxxnibxf.supabase.co",supabaseAnonKey:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZXpwZ2Fhd3R1ZnJ4eG5pYnhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDM5ODEsImV4cCI6MjEwNDMxOTk4MX0.tDMRuV6_Ov0WCPVeoHkaDAGwTKoRrIak4I7cwA7zIIU"};
+(()=>{let libraryPromise=null,roleRefreshTimer=null;
+function applyTableBranding(){if(document.querySelector('#pedro-table-branding'))return;const style=document.createElement('style');style.id='pedro-table-branding';style.textContent=`
+.professional-table .table-watermark{position:absolute!important;left:50%!important;top:48%!important;width:clamp(250px,36%,520px)!important;height:clamp(105px,27%,235px)!important;transform:translate(-50%,-50%)!important;display:block!important;overflow:hidden!important;font-size:0!important;line-height:0!important;color:transparent!important;text-shadow:none!important;background-image:url('assets/logo/pedro_logo.png')!important;background-position:center!important;background-repeat:no-repeat!important;background-size:contain!important;opacity:.105!important;filter:grayscale(1) sepia(.62) saturate(.72) contrast(1.1)!important;mix-blend-mode:soft-light!important;pointer-events:none!important;user-select:none!important;z-index:1!important}
+.professional-table::before{background:linear-gradient(90deg,rgba(116,25,22,.075) 0%,transparent 34%,transparent 66%,rgba(18,71,106,.075) 100%),radial-gradient(ellipse at 50% 2%,rgba(255,255,255,.065),transparent 31%),repeating-linear-gradient(22deg,rgba(255,255,255,.011) 0 1px,transparent 1px 5px)!important}
+.professional-table .team-one-seat .seat-avatar,.professional-table .team-one-seat.occupied .seat-avatar,.professional-table .team-one-seat.selected .seat-avatar{background:linear-gradient(145deg,#a3322a,#591a16)!important;border-color:#e95a4f!important;color:#fff6ed!important;box-shadow:0 0 0 3px rgba(137,34,28,.58),0 7px 17px rgba(0,0,0,.5)!important}
+.professional-table .team-one-seat .seat-label,.professional-table .team-one-seat.occupied .seat-label{border:1px solid rgba(213,75,63,.62)!important;border-left:4px solid #dc493d!important;background:linear-gradient(90deg,rgba(91,27,23,.97),rgba(6,14,15,.96) 74%)!important}
+.professional-table .team-two-seat .seat-avatar,.professional-table .team-two-seat.occupied .seat-avatar,.professional-table .team-two-seat.selected .seat-avatar{background:linear-gradient(145deg,#1e6e96,#103b53)!important;border-color:#4eb1de!important;color:#f4fbff!important;box-shadow:0 0 0 3px rgba(19,86,120,.58),0 7px 17px rgba(0,0,0,.5)!important}
+.professional-table .team-two-seat .seat-label,.professional-table .team-two-seat.occupied .seat-label{border:1px solid rgba(47,147,190,.62)!important;border-left:4px solid #2f96c3!important;background:linear-gradient(90deg,rgba(13,61,84,.97),rgba(6,14,15,.96) 74%)!important}
+.professional-table .table-seat-button.selected .seat-avatar{outline:3px solid #efb746!important;outline-offset:3px!important}
+.professional-table .team-one-seat.selected .seat-avatar,.professional-table .team-one-seat.selected .seat-label{box-shadow:0 0 0 2px #efb746,0 0 24px rgba(222,77,61,.72)!important}
+.professional-table .team-two-seat.selected .seat-avatar,.professional-table .team-two-seat.selected .seat-label{box-shadow:0 0 0 2px #efb746,0 0 24px rgba(53,159,209,.72)!important}
+.professional-table .team-one-seat .seat-label b{color:#ffd0ca!important}.professional-table .team-two-seat .seat-label b{color:#c9ecff!important}.professional-table .seat-label{min-width:92px!important;padding:7px 10px!important}.professional-table .seat-label small{font-size:8px!important;letter-spacing:.025em!important}
+@media(max-width:1000px){.professional-table .table-watermark{width:43%!important;opacity:.09!important}}
+`;document.head.appendChild(style)}
+function loadLibrary(){if(window.supabase?.createClient)return Promise.resolve();if(libraryPromise)return libraryPromise;libraryPromise=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});return libraryPromise}
+async function getClient(){await loadLibrary();if(window.pedroSupabase)return window.pedroSupabase;window.pedroSupabase=window.supabase.createClient(PEDRO_CONFIG.supabaseUrl,PEDRO_CONFIG.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});return window.pedroSupabase}
+function profileNav(){return[...document.querySelectorAll('.nav-button')].find(e=>e.textContent.trim().toLowerCase()==='profile')}
+function removeAdmin(){document.querySelector('#nav-admin-link')?.remove()}
+function addAdmin(){if(document.querySelector('#nav-admin-link'))return true;const p=profileNav();if(!p)return false;const a=document.createElement('a');a.id='nav-admin-link';a.className='nav-button';a.href='admin.html';a.textContent='Administration';a.style.cssText='display:flex;align-items:center;text-decoration:none';p.insertAdjacentElement('afterend',a);return true}
+async function refreshRole(){clearTimeout(roleRefreshTimer);try{const c=await getClient();const{data:s,error:se}=await c.auth.getSession();if(se)throw se;if(!s.session?.user){removeAdmin();return}const{data,error}=await c.schema('pedro').rpc('is_admin');if(error)throw error;if(data===true){if(!addAdmin())roleRefreshTimer=setTimeout(refreshRole,250)}else removeAdmin()}catch(e){removeAdmin();console.error('Pedro Admin navigation failed:',e)}}
+async function start(){applyTableBranding();await refreshRole();const c=await getClient();c.auth.onAuthStateChange(()=>{roleRefreshTimer=setTimeout(refreshRole,50)});window.addEventListener('focus',refreshRole);window.pedroRefreshRoleNavigation=refreshRole}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start()})();
