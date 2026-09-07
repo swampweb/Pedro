@@ -49,5 +49,85 @@ async function saveProfileDashboard(){const client=await getClient(),profile=win
 async function sendProfilePasswordReset(){const client=await getClient();const email=document.querySelector('#profile-dashboard-email-readonly').value;if(!email)return;const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});profileStatus(error?error.message:'Password-reset email sent. Check the inbox.',error?'error':'success')}
 function watchProfileNavigation(){document.addEventListener('click',event=>{const target=event.target.closest('[data-screen="profile"],#nav-profile');if(target)setTimeout(loadProfileDashboard,0)},true)}
 
-async function start(){applyTableBranding();await ensureProfileDashboard();watchProfileNavigation();await refreshRole();const c=await getClient();c.auth.onAuthStateChange(()=>{roleRefreshTimer=setTimeout(refreshRole,50)});window.addEventListener('focus',refreshRole);window.pedroRefreshRoleNavigation=refreshRole}
+
+function applyCreateTableCleanup(){
+  if(document.querySelector('#pedro-create-table-cleanup'))return;
+  const style=document.createElement('style');
+  style.id='pedro-create-table-cleanup';
+  style.textContent=`
+    #screen-create [hidden],
+    #room-code-field[hidden],
+    #custom-score-field[hidden]{display:none!important}
+    #screen-create .form-panel{max-width:760px!important;padding:25px 30px!important}
+    #screen-create .form-panel>h2{margin:3px 0 5px!important;font-size:27px!important}
+    #screen-create .form-panel>.muted{margin:0 0 16px!important;font-size:12px!important}
+    #screen-create .form-panel>label{margin:13px 0!important;gap:6px!important}
+    #screen-create .form-panel fieldset{margin:15px 0!important}
+    #screen-create .form-panel legend{margin-bottom:7px!important}
+    #screen-create .choice-grid{gap:9px!important}
+    #screen-create .choice{padding:11px 13px!important}
+    #screen-create .choice small{margin-top:3px!important}
+    #screen-create .form-panel input,
+    #screen-create .form-panel select{min-height:42px!important}
+    #screen-create .code-line{grid-template-columns:minmax(0,1fr) auto!important}
+    #screen-create .code-line button{min-height:42px!important}
+    #screen-create .toggle-line{margin-top:15px!important;padding:13px 0!important}
+    #screen-create .form-actions{margin-top:18px!important}
+    #screen-create .form-actions button{min-height:41px!important}
+    @media(max-width:650px){
+      #screen-create .form-panel{padding:20px 16px!important}
+      #screen-create .choice-grid{grid-template-columns:1fr!important}
+    }
+  `;
+  document.head.appendChild(style);
+
+  const createScreen=document.querySelector('#screen-create');
+  if(!createScreen)return;
+  const publicChoice=createScreen.querySelector('[data-visibility="public"]');
+  const privateChoice=createScreen.querySelector('[data-visibility="private"]');
+  const roomCodeField=document.querySelector('#room-code-field');
+  const scoreSelect=document.querySelector('#winning-score');
+  const customScoreField=document.querySelector('#custom-score-field');
+
+  function setVisibility(type,triggerExisting=true){
+    const isPrivate=type==='private';
+    publicChoice?.classList.toggle('selected',!isPrivate);
+    privateChoice?.classList.toggle('selected',isPrivate);
+    if(roomCodeField)roomCodeField.hidden=!isPrivate;
+    if(triggerExisting){
+      const target=isPrivate?privateChoice:publicChoice;
+      if(target&&!target.dataset.visibilityCleanupDispatch){
+        target.dataset.visibilityCleanupDispatch='1';
+        target.click();
+        delete target.dataset.visibilityCleanupDispatch;
+      }
+    }
+  }
+
+  function syncCustomScore(){
+    if(customScoreField)customScoreField.hidden=scoreSelect?.value!=='custom';
+  }
+
+  publicChoice?.addEventListener('click',()=>setVisibility('public',false));
+  privateChoice?.addEventListener('click',()=>setVisibility('private',false));
+  scoreSelect?.addEventListener('change',syncCustomScore);
+
+  setTimeout(()=>{
+    setVisibility('public',true);
+    if(scoreSelect&&scoreSelect.value==='custom')scoreSelect.value='52';
+    syncCustomScore();
+  },0);
+
+  document.addEventListener('click',event=>{
+    const openCreate=event.target.closest('[data-screen="create"]');
+    if(!openCreate)return;
+    setTimeout(()=>{
+      setVisibility('public',true);
+      if(scoreSelect)scoreSelect.value='52';
+      syncCustomScore();
+    },0);
+  },true);
+}
+
+async function start(){applyTableBranding();await ensureProfileDashboard();watchProfileNavigation();applyCreateTableCleanup();await refreshRole();const c=await getClient();c.auth.onAuthStateChange(()=>{roleRefreshTimer=setTimeout(refreshRole,50)});window.addEventListener('focus',refreshRole);window.pedroRefreshRoleNavigation=refreshRole}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start()})();
