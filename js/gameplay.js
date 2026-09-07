@@ -1,9 +1,122 @@
-(()=>{if(window.__pedroGameplayReadableV4)return;window.__pedroGameplayReadableV4=true;const Game=window.PedroGameState;if(!Game)return console.error('game-state.js must load before gameplay.js');const labels={south:'South',west:'West',north:'North',east:'East'},suitNames={'♥':'Hearts','♦':'Diamonds','♣':'Clubs','♠':'Spades'};function player(){return document.querySelector('#user-name')?.textContent.trim()||'Pedro Player'}function active(){return document.querySelector('#game-view')?.classList.contains('active')}function seatOf(state){return Object.keys(state.seats||{}).find(seat=>state.seats[seat]===player())||null}function isRed(card){return card.suit==='♥'||card.suit==='♦'}
-function styles(){if(document.querySelector('#pedro-readable-v4'))return;const style=document.createElement('style');style.id='pedro-readable-v4';style.textContent=`
-.v4-status-panel{order:-10;margin:0 0 10px;padding:14px;border:1px solid #52666e;border-radius:10px;background:linear-gradient(145deg,#122127,#081114);box-shadow:inset 0 1px rgba(255,255,255,.035)}.v4-status-heading{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid #35474d}.v4-status-heading span{color:#9fd9ef;font-size:11px;font-weight:900;letter-spacing:.13em}.v4-phase{padding:5px 9px;border:1px solid #7b6632;border-radius:15px;color:#f5d370;font-size:10px;font-weight:900}.v4-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:11px}.v4-status-item{padding:10px;border:1px solid #304249;border-radius:7px;background:#0a1519}.v4-status-item span,.v4-status-item b{display:block}.v4-status-item span{color:#aebdc1;font-size:10px;font-weight:700}.v4-status-item b{margin-top:5px;color:#fff7e5;font-size:13px;line-height:1.25;overflow-wrap:anywhere}.v4-status-item.waiting b{color:#f4d26d}.v4-dealer{position:absolute;z-index:30;padding:4px 8px;border:1px solid #d4a94b;border-radius:14px;background:#231907;color:#f5d16c;font-size:9px;font-weight:900}.v4-dealer{right:-67px;top:2px}.east-seat .v4-dealer{left:-67px;right:auto}.v4-visible-hand{position:absolute;z-index:28;left:50%;bottom:4px;transform:translateX(-50%);display:flex;justify-content:center;align-items:flex-end;max-width:82%}.v4-card{position:relative;width:72px;height:104px;margin-left:-17px;border:1px solid #d0d0d0;border-radius:8px;background:linear-gradient(#fff,#eee9df);color:#111;box-shadow:0 8px 18px #0008;transform:rotate(var(--rotation));transform-origin:bottom center}.v4-card:first-child{margin-left:0}.v4-card.red{color:#c62c34}.v4-card b{position:absolute;left:7px;top:5px;font-size:17px}.v4-card i{position:absolute;inset:0;display:grid;place-items:center;font-size:33px;font-style:normal}.v4-flow{margin:0 0 10px;padding:12px;border:1px solid #40555d;border-radius:9px;background:#091418}.v4-flow-title{display:flex;justify-content:space-between;color:#9fd9ef;font-size:10px;font-weight:900;letter-spacing:.1em}.v4-bids{display:grid;gap:6px;margin-top:9px}.v4-bid-row{display:flex;justify-content:space-between;padding:8px;border:1px solid #304249;border-radius:6px;color:#e7eeec;font-size:11px}.v4-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.v4-actions button{min-height:40px;border:1px solid #506771;border-radius:7px;background:#14272e;color:#fff;font-size:12px;font-weight:900;line-height:1.15}.v4-actions button:disabled{opacity:.35}.v4-actions .shoot{border-color:#8b7133;background:#33280e;color:#f5d77e}.v4-trump{grid-template-columns:1fr 1fr}.v4-trump button{min-height:48px;background:#f2f4f4;color:#131313}.v4-trump .red{color:#c62c34}
-#ready-button,#start-game,#deal-cards,#random-seat,#watch-table,#fill-demo-players{min-height:38px!important;height:auto!important;padding:8px 11px!important;border:1px solid #506771!important;border-radius:7px!important;background:#14272e!important;color:#fff!important;box-shadow:none!important;font-size:11px!important;font-weight:900!important;line-height:1.2!important;letter-spacing:.04em!important}.host-control-block,.stacked-controls{gap:7px!important}.table-control-frame button{overflow:visible!important;white-space:normal!important}.table-info-panel{display:flex!important;flex-direction:column!important;overflow-y:auto!important}.professional-table>.v3-game-status,#v3-game-status{display:none!important}
-@media(max-width:1200px){.v4-status-grid{grid-template-columns:1fr}.v4-card{width:62px;height:92px;margin-left:-21px}}
-`;document.head.appendChild(style)}
-function rightPanel(){return document.querySelector('.table-info-panel')}function statusPanel(){let panel=document.querySelector('#v4-status-panel');if(panel)return panel;panel=document.createElement('section');panel.id='v4-status-panel';panel.className='v4-status-panel';const target=rightPanel();target?.prepend(panel);return panel}function flowPanel(){let panel=document.querySelector('#v4-flow');if(panel)return panel;panel=document.createElement('section');panel.id='v4-flow';panel.className='v4-flow';document.querySelector('#table-control-frame')?.prepend(panel);return panel}function renderHand(state){let hand=document.querySelector('#v4-visible-hand');if(!hand){hand=document.createElement('div');hand.id='v4-visible-hand';hand.className='v4-visible-hand';document.querySelector('.professional-table')?.appendChild(hand)}const seat=seatOf(state),cards=seat?(state.hands?.[seat]||[]):[];hand.innerHTML=cards.map((card,index)=>`<button class="v4-card ${isRed(card)?'red':''}" style="--rotation:${(index-(cards.length-1)/2)*2}deg"><b>${card.rank}<br>${card.suit}</b><i>${card.suit}</i></button>`).join('');hand.hidden=!cards.length}
-function render(){if(!active())return;const state=Game.snap();document.querySelectorAll('.v4-dealer').forEach(node=>node.remove());const dealer=document.querySelector(`[data-table-seat="${state.dealer}"]`);if(dealer){const badge=document.createElement('span');badge.className='v4-dealer';badge.textContent='DEALER';dealer.appendChild(badge)}const waiting=state.phase==='bidding'?(state.seats?.[state.currentBidder]||labels[state.currentBidder]):state.phase==='trump'?(state.seats?.[state.winner]||labels[state.winner]):state.phase==='dealer-discard'?(state.seats?.[state.dealer]||labels[state.dealer]):'—';const high=state.highBid?`${state.highBid.amount} by ${state.seats?.[state.highBid.seat]||labels[state.highBid.seat]}`:'No bid';statusPanel().innerHTML=`<div class="v4-status-heading"><span>GAME STATUS</span><b class="v4-phase">${String(state.phase||'waiting').replace('-',' ').toUpperCase()}</b></div><div class="v4-status-grid"><div class="v4-status-item"><span>Dealer</span><b>${state.seats?.[state.dealer]||labels[state.dealer]}</b></div><div class="v4-status-item waiting"><span>Waiting On</span><b>${waiting}</b></div><div class="v4-status-item"><span>High Bid</span><b>${high}</b></div><div class="v4-status-item"><span>Trump</span><b>${state.trump?suitNames[state.trump]:'Not selected'}</b></div></div>`;const seat=seatOf(state);let actions='';if(state.phase==='bidding'){actions=`<div class="v4-actions"><button data-v4-bid="pass" ${seat!==state.currentBidder?'disabled':''}>PASS</button>${Game.allowed(seat).map(bid=>`<button class="${bid===28?'shoot':''}" data-v4-bid="${bid}">${bid}</button>`).join('')}</div>`}else if(state.phase==='trump'&&seat===state.winner){actions=`<div class="v4-actions v4-trump">${['♥','♠','♦','♣'].map(suit=>`<button class="${isRed({suit})?'red':''}" data-v4-trump="${suit}">${suit} ${suitNames[suit]}</button>`).join('')}</div>`}flowPanel().innerHTML=`<div class="v4-flow-title"><span>BIDDING HISTORY</span><b>${state.bids?.length||0}</b></div><div class="v4-bids">${state.bids?.length?state.bids.map(bid=>`<div class="v4-bid-row"><span>${bid.player}</span><b>${bid.amount}</b></div>`).join(''):'<div class="v4-bid-row"><span>No bids yet</span><b>—</b></div>'}</div>${actions}`;renderHand(state)}
-document.addEventListener('click',event=>{const bid=event.target.closest('[data-v4-bid]');if(bid){const state=Game.snap(),result=Game.bid(seatOf(state),bid.dataset.v4Bid==='pass'?'pass':Number(bid.dataset.v4Bid));if(!result.ok)alert(result.message);render()}const trump=event.target.closest('[data-v4-trump]');if(trump){Game.trump(trump.dataset.v4Trump);render()}},true);window.addEventListener('pedro:state',render);styles();setTimeout(render,150)})();
+(() => {
+  if (window.__pedroStableControlsV5) return;
+  window.__pedroStableControlsV5 = true;
+  const Game = window.PedroGameState;
+  if (!Game) return;
+
+  const seatNames = { south: 'South', west: 'West', north: 'North', east: 'East' };
+  const suitNames = { '♥': 'Hearts', '♦': 'Diamonds', '♣': 'Clubs', '♠': 'Spades' };
+  const isRed = suit => suit === '♥' || suit === '♦';
+  const currentPlayer = () => document.querySelector('#user-name')?.textContent.trim() || 'Pedro Player';
+  const currentSeat = state => Object.keys(state.seats || {}).find(seat => state.seats[seat] === currentPlayer()) || null;
+  const gameVisible = () => document.querySelector('#game-view')?.classList.contains('active');
+
+  function injectStyles() {
+    if (document.querySelector('#pedro-stable-controls-v5')) return;
+    const style = document.createElement('style');
+    style.id = 'pedro-stable-controls-v5';
+    style.textContent = `
+      button:not(:disabled), .nav-button, [role="button"] { cursor:pointer!important; transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .08s ease,filter .16s ease!important; }
+      button:not(:disabled):hover, .nav-button:hover { background-color:#1d3b46!important; border-color:#78bdd8!important; filter:brightness(1.10)!important; box-shadow:0 0 0 2px rgba(120,189,216,.16),0 5px 14px rgba(0,0,0,.28)!important; }
+      button:not(:disabled):active, .nav-button:active { transform:translateY(1px)!important; filter:brightness(.96)!important; }
+      button:focus-visible, .nav-button:focus-visible { outline:2px solid #f0c457!important; outline-offset:2px!important; }
+      button:disabled { cursor:not-allowed!important; opacity:.42!important; }
+      #ready-button,#start-game,#deal-cards,#random-seat,#watch-table,#fill-demo-players { pointer-events:auto!important; position:relative!important; z-index:2!important; min-height:39px!important; padding:8px 12px!important; border:1px solid #4d6670!important; border-radius:7px!important; background:#142a32!important; color:#fff!important; font-size:11px!important; font-weight:900!important; line-height:1.2!important; box-shadow:none!important; }
+      .center-status { min-width:255px!important; padding:8px 13px!important; }
+      .center-status>span { font-size:10px!important; color:#f1cf70!important; }
+      .center-status small { display:grid!important; grid-template-columns:1fr 1fr!important; gap:3px 10px!important; margin-top:5px!important; color:#d9e2e2!important; font-size:9px!important; line-height:1.35!important; white-space:normal!important; }
+      .center-status small b { color:#fff7df!important; overflow-wrap:anywhere!important; }
+      .stable-hand { position:absolute;z-index:28;left:50%;bottom:4px;transform:translateX(-50%);display:flex;justify-content:center;align-items:flex-end;max-width:82%; }
+      .stable-card { position:relative;width:72px;height:104px;margin-left:-17px;border:1px solid #d0d0d0;border-radius:8px;background:linear-gradient(#fff,#eee9df);color:#111;box-shadow:0 8px 18px #0008;transform:rotate(var(--rot));transform-origin:bottom center; }
+      .stable-card:first-child{margin-left:0}.stable-card.red{color:#c62c34}.stable-card b{position:absolute;left:7px;top:5px;font-size:17px}.stable-card i{position:absolute;inset:0;display:grid;place-items:center;font-size:33px;font-style:normal}
+      .stable-bidding { margin:0 0 10px;padding:11px;border:1px solid #40565e;border-radius:9px;background:#091519; }
+      .stable-bidding-title{display:flex;justify-content:space-between;color:#9fd9ef;font-size:10px;font-weight:900;letter-spacing:.1em}.stable-bid-list{display:grid;gap:5px;margin-top:8px}.stable-bid-row{display:flex;justify-content:space-between;padding:7px;border:1px solid #304249;border-radius:6px;color:#e7eeec;font-size:11px}.stable-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:9px}.stable-actions button{min-height:39px;border:1px solid #4d6670;border-radius:7px;background:#142a32;color:#fff;font-size:11px;font-weight:900}.stable-actions .shoot{border-color:#8c7134;background:#33280f;color:#f5d77e}.stable-trump{grid-template-columns:1fr 1fr}.stable-trump button{min-height:46px;background:#f1f4f4;color:#111}.stable-trump .red{color:#c62c34}
+      #v3-game-status,#v4-status-panel,#v3-flow-panel,#v4-flow{display:none!important}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function renderTopStatus(state) {
+    const phase = String(state.phase || 'waiting').replace('-', ' ').toUpperCase();
+    const dealer = state.seats?.[state.dealer] || seatNames[state.dealer] || '—';
+    const waiting = state.phase === 'bidding'
+      ? (state.seats?.[state.currentBidder] || seatNames[state.currentBidder])
+      : state.phase === 'trump'
+        ? (state.seats?.[state.winner] || seatNames[state.winner])
+        : state.phase === 'dealer-discard'
+          ? dealer
+          : 'Waiting for players';
+    const highBid = state.highBid ? `${state.highBid.amount} by ${state.seats?.[state.highBid.seat] || seatNames[state.highBid.seat]}` : 'No bid';
+    const trump = state.trump ? suitNames[state.trump] : 'Not selected';
+
+    const phaseElement = document.querySelector('#center-phase');
+    if (phaseElement) phaseElement.textContent = `${phase} · Waiting on ${waiting}`;
+    const centerStatus = document.querySelector('.center-status small');
+    if (centerStatus) {
+      centerStatus.innerHTML = `<b>Dealer: ${dealer}</b><b>Waiting: ${waiting}</b><b>High bid: ${highBid}</b><b>Trump: ${trump}</b>`;
+    }
+    const phaseBadge = document.querySelector('#phase-badge');
+    if (phaseBadge) phaseBadge.textContent = `${phase} · ${waiting}`;
+  }
+
+  function renderHand(state) {
+    let hand = document.querySelector('#stable-hand');
+    if (!hand) {
+      hand = document.createElement('div');
+      hand.id = 'stable-hand';
+      hand.className = 'stable-hand';
+      document.querySelector('.professional-table')?.appendChild(hand);
+    }
+    const seat = currentSeat(state);
+    const cards = seat ? (state.hands?.[seat] || []) : [];
+    hand.innerHTML = cards.map((card, index) => `<button class="stable-card ${isRed(card.suit) ? 'red' : ''}" style="--rot:${(index-(cards.length-1)/2)*2}deg"><b>${card.rank}<br>${card.suit}</b><i>${card.suit}</i></button>`).join('');
+    hand.hidden = !cards.length;
+  }
+
+  function renderBidControls(state) {
+    let panel = document.querySelector('#stable-bidding');
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = 'stable-bidding';
+      panel.className = 'stable-bidding';
+      document.querySelector('#table-control-frame')?.prepend(panel);
+    }
+    const seat = currentSeat(state);
+    let actions = '';
+    if (state.phase === 'bidding') {
+      actions = `<div class="stable-actions"><button data-stable-bid="pass" ${seat !== state.currentBidder ? 'disabled' : ''}>PASS</button>${Game.allowed(seat).map(bid => `<button class="${bid === 28 ? 'shoot' : ''}" data-stable-bid="${bid}">${bid}</button>`).join('')}</div>`;
+    } else if (state.phase === 'trump' && seat === state.winner) {
+      actions = `<div class="stable-actions stable-trump">${['♥','♠','♦','♣'].map(suit => `<button class="${isRed(suit) ? 'red' : ''}" data-stable-trump="${suit}">${suit} ${suitNames[suit]}</button>`).join('')}</div>`;
+    }
+    panel.innerHTML = `<div class="stable-bidding-title"><span>BIDDING HISTORY</span><b>${state.bids?.length || 0}</b></div><div class="stable-bid-list">${state.bids?.length ? state.bids.map(bid => `<div class="stable-bid-row"><span>${bid.player}</span><b>${bid.amount}</b></div>`).join('') : '<div class="stable-bid-row"><span>No bids yet</span><b>—</b></div>'}</div>${actions}`;
+  }
+
+  function render() {
+    if (!gameVisible()) return;
+    const state = Game.snap();
+    renderTopStatus(state);
+    renderHand(state);
+    renderBidControls(state);
+  }
+
+  document.addEventListener('click', event => {
+    const bid = event.target.closest('[data-stable-bid]');
+    if (bid) {
+      const state = Game.snap();
+      const result = Game.bid(currentSeat(state), bid.dataset.stableBid === 'pass' ? 'pass' : Number(bid.dataset.stableBid));
+      if (!result.ok) alert(result.message);
+      render();
+    }
+    const trump = event.target.closest('[data-stable-trump]');
+    if (trump) {
+      Game.trump(trump.dataset.stableTrump);
+      render();
+    }
+  }, true);
+
+  window.addEventListener('pedro:state', render);
+  window.addEventListener('focus', () => setTimeout(render, 50));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(render, 50); });
+  injectStyles();
+  setTimeout(render, 120);
+})();
