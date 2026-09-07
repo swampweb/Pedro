@@ -9,6 +9,63 @@ window.PEDRO_CONFIG = {
   let libraryPromise = null;
   let roleRefreshTimer = null;
 
+  function applyCompactLobbyLayout() {
+    if (document.querySelector('#pedro-compact-layout')) return;
+    const style = document.createElement('style');
+    style.id = 'pedro-compact-layout';
+    style.textContent = `
+      .content { padding-top: 0 !important; }
+      .lobby-hero, .hero {
+        min-height: 108px !important;
+        padding: 18px 24px !important;
+        border-radius: 12px !important;
+      }
+      .lobby-hero .eyebrow, .hero .eyebrow {
+        margin-bottom: 5px !important;
+        font-size: 9px !important;
+      }
+      .lobby-hero h2, .hero h2 {
+        margin: 0 0 6px !important;
+        font-size: 28px !important;
+        line-height: 1.05 !important;
+      }
+      .lobby-hero p:last-child, .hero p:last-child {
+        margin: 0 !important;
+        font-size: 12px !important;
+      }
+      .hero-actions button, .lobby-hero button {
+        min-height: 40px !important;
+        padding: 0 16px !important;
+        font-size: 11px !important;
+      }
+      .section-heading {
+        margin: 18px 4px 9px !important;
+      }
+      .section-heading .eyebrow {
+        margin-bottom: 4px !important;
+        font-size: 9px !important;
+      }
+      .section-heading h2, .section-heading h3 {
+        font-size: 23px !important;
+        line-height: 1.05 !important;
+      }
+      .section-heading .secondary, #refresh-tables {
+        min-height: 38px !important;
+        padding: 0 14px !important;
+        font-size: 11px !important;
+      }
+      .table-row {
+        padding-top: 12px !important;
+        padding-bottom: 12px !important;
+      }
+      @media (max-width: 650px) {
+        .lobby-hero, .hero { padding: 16px !important; }
+        .lobby-hero h2, .hero h2 { font-size: 24px !important; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function loadSupabaseLibrary() {
     if (window.supabase?.createClient) return Promise.resolve();
     if (libraryPromise) return libraryPromise;
@@ -103,6 +160,7 @@ window.PEDRO_CONFIG = {
   }
 
   async function startRoleNavigation() {
+    applyCompactLobbyLayout();
     await refreshRoleNavigation();
     const client = await getSupabaseClient();
     client.auth.onAuthStateChange(() => {
