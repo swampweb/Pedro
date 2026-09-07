@@ -438,3 +438,94 @@ button.table-seat-button {
     height: 620px;
   }
 }
+
+/* =====================================================================
+   Seat position correction: all controls stay inside the felt table
+   ===================================================================== */
+.professional-table {
+  position: relative !important;
+  isolation: isolate;
+  contain: layout paint;
+}
+
+.professional-table > .table-seat-button {
+  position: absolute !important;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: 190px;
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.professional-table > .north-seat {
+  top: 24px !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+  flex-direction: column;
+}
+
+.professional-table > .south-seat {
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: 108px !important;
+  transform: translateX(-50%) !important;
+  flex-direction: row;
+}
+
+.professional-table > .west-seat {
+  left: 58px !important;
+  right: auto !important;
+  top: 48% !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  flex-direction: row;
+}
+
+.professional-table > .east-seat {
+  right: 58px !important;
+  left: auto !important;
+  top: 48% !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  flex-direction: row-reverse;
+}
+
+.professional-table > .west-seat:hover,
+.professional-table > .east-seat:hover {
+  transform: translateY(-50%) scale(1.025) !important;
+}
+
+.professional-table > .north-seat:hover,
+.professional-table > .south-seat:hover {
+  transform: translateX(-50%) scale(1.025) !important;
+}
+
+.professional-table > .west-seat .seat-action {
+  left: calc(100% + 7px);
+  right: auto;
+}
+
+.professional-table > .east-seat .seat-action {
+  right: calc(100% + 7px);
+  left: auto;
+}
+
+@media (max-width: 1250px) and (min-width: 1001px) {
+  .professional-table > .west-seat { left: 38px !important; }
+  .professional-table > .east-seat { right: 38px !important; }
+  .professional-table > .table-seat-button { max-width: 165px; }
+  .professional-table > .table-seat-button .seat-label { min-width: 86px; padding: 7px 9px; }
+}
+
+@media (max-width: 1000px) {
+  .professional-table > .west-seat { left: 28px !important; }
+  .professional-table > .east-seat { right: 28px !important; }
+}
