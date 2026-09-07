@@ -132,13 +132,20 @@
           <div id="host-controls" class="host-controls"><span>You are the host</span><button id="fill-demo-players" class="secondary">FILL OPEN SEATS</button><button id="start-game" class="primary" disabled>START GAME</button></div>
         </div>
 
+        <div class="center-scoreboard panel" aria-label="Match scoreboard">
+          <div class="score-goal-block"><span>MATCH</span><b id="center-score-goal">Race to 52</b></div>
+          <div class="center-team center-team-one"><span>TEAM 1</span><b id="center-team1-score">0</b><small id="center-team1-names">North + South</small></div>
+          <div class="center-status"><span id="center-phase">WAITING</span><small><b id="center-bid">Bid —</b> · <b id="center-trump">Trump —</b></small></div>
+          <div class="center-team center-team-two"><span>TEAM 2</span><b id="center-team2-score">0</b><small id="center-team2-names">West + East</small></div>
+        </div>
+
         <div id="felt-table" class="professional-table">
           <div class="table-rail"></div>
           <div id="deck-stack" class="deck-stack hidden"><i></i><i></i><i></i></div>
-          <div class="seat-position north-seat" data-table-seat="north"><div class="seat-avatar">N</div><div class="seat-label"><b>Open Slot</b><small>Team 1 · North</small></div><div class="opponent-cards"></div></div>
-          <div class="seat-position west-seat" data-table-seat="west"><div class="seat-avatar">W</div><div class="seat-label"><b>Open Slot</b><small>Team 2 · West</small></div><div class="opponent-cards"></div></div>
-          <div class="seat-position east-seat" data-table-seat="east"><div class="seat-avatar">E</div><div class="seat-label"><b>Open Slot</b><small>Team 2 · East</small></div><div class="opponent-cards"></div></div>
-          <div class="seat-position south-seat" data-table-seat="south"><div class="seat-avatar">S</div><div class="seat-label"><b>Open Slot</b><small>Team 1 · South</small></div><div class="opponent-cards"></div></div>
+          <div class="seat-position north-seat team-one-seat" data-table-seat="north"><div class="seat-avatar">N</div><div class="seat-label"><b>Open Slot</b><small>Team 1 · North</small></div><div class="opponent-cards"></div></div>
+          <div class="seat-position west-seat team-two-seat" data-table-seat="west"><div class="seat-avatar">W</div><div class="seat-label"><b>Open Slot</b><small>Team 2 · West</small></div><div class="opponent-cards"></div></div>
+          <div class="seat-position east-seat team-two-seat" data-table-seat="east"><div class="seat-avatar">E</div><div class="seat-label"><b>Open Slot</b><small>Team 2 · East</small></div><div class="opponent-cards"></div></div>
+          <div class="seat-position south-seat team-one-seat" data-table-seat="south"><div class="seat-avatar">S</div><div class="seat-label"><b>Open Slot</b><small>Team 1 · South</small></div><div class="opponent-cards"></div></div>
           <div id="trick-zone" class="trick-zone"><div class="table-watermark">PEDRO</div></div>
           <div id="player-hand" class="player-hand"></div>
         </div>
@@ -156,7 +163,7 @@
         <div class="panel-title"><span>TABLE INFO</span><b id="table-status">Open</b></div>
         <div class="table-info-list"><div><span>Host</span><b id="table-host">—</b></div><div><span>Visibility</span><b id="table-visibility">Public</b></div><div><span>Play style</span><b id="game-rule">Follow Suit</b></div><div><span>Winning score</span><b id="game-winning-score">52</b></div><div><span>Players</span><b id="player-count">0 / 4</b></div><div><span>Spectators</span><b id="spectator-count">0</b></div></div>
         <div class="side-section"><h3>Hand History</h3><div id="hand-history" class="history-list"><p class="muted">No completed hands</p></div></div>
-        <div class="side-section"><h3>Host Options</h3><div class="admin-actions"><button id="remove-table" class="danger-button">DELETE TABLE</button></div></div>
+
       </aside>
     </main>
   </section>
